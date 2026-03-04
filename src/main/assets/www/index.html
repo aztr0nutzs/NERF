@@ -1,0 +1,4335 @@
+﻿<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Psycho-Engine Speedtest (HOLO Merge)</title>
+
+  <script src="holo-themes.js"></script>
+  <script src="holo-theme-manager.js"></script>
+  <script src="native-bridge.js"></script>
+  <script src="control-wiring-debug.js"></script>
+
+  <link href="vendor/fonts/google-fonts.css" rel="stylesheet"/>
+  <link href="holo-theme.css" rel="stylesheet"/>
+  <script src="vendor/tailwind/tailwind.min.js"></script>
+
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#0db9f2",
+            "secondary": "#a855f7",
+            "background-dark": "#050a0c",
+            "panel": "#111c21",
+            "ethereal-blue": "#00d4ff",
+            "cyber-violet": "#9d50bb",
+            "void-black": "#020408",
+            "engine-iron": "#1a1c23",
+            "danger": "#ff3c00",
+          },
+          fontFamily: {
+            "display": ["Space Grotesk", "sans-serif"],
+            "mono": ["JetBrains Mono", "monospace"],
+          },
+          borderRadius: {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+        },
+      },
+    };
+  </script>
+
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .vhs-overlay {
+        background:
+          linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.18) 50%),
+          linear-gradient(90deg, rgba(255,0,0,0.055), rgba(0,255,0,0.02), rgba(0,0,255,0.055));
+        background-size: 100% 4px, 3px 100%;
+        pointer-events: none;
+      }
+      .chromatic-aberration {
+        text-shadow: 1.5px 0 0 rgba(255,0,0,0.38), -1.5px 0 0 rgba(0,255,255,0.38);
+      }
+      .glitch-border {
+        box-shadow:
+          0 0 14px rgba(0,212,255,0.20),
+          0 0 30px rgba(157,80,187,0.12),
+          inset 0 0 14px rgba(0,212,255,0.10);
+      }
+      .glass-ring {
+        border: 2px solid rgba(0, 212, 255, 0.14);
+        box-shadow:
+          inset 0 0 20px rgba(0, 212, 255, 0.09),
+          0 0 18px rgba(157, 80, 187, 0.16);
+      }
+      .nitro-shard {
+        clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
+      }
+      .engine-frame {
+        background: linear-gradient(145deg, #1a1c23, #020408);
+        border: 1px solid rgba(255,255,255,0.05);
+        box-shadow: 10px 10px 22px #010204, -5px -5px 15px rgba(255,255,255,0.02);
+      }
+      .neural-node {
+        background: radial-gradient(circle, rgba(0, 212, 255, 0.30) 0%, transparent 70%);
+      }
+      .perspective-center { perspective: 1200px; }
+      .rotate-x-25 { transform: rotateX(25deg); }
+      .data-heart-glow { filter: drop-shadow(0 0 15px rgba(0,212,255,0.55)); }
+      .soft-frost {
+        background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+        backdrop-filter: blur(18px);
+      }
+      .scanline-mask {
+        background-image: repeating-linear-gradient(
+          0deg,
+          rgba(255,255,255,0.00),
+          rgba(255,255,255,0.00) 2px,
+          rgba(0,212,255,0.08) 2px,
+          rgba(0,212,255,0.08) 3px
+        );
+        mix-blend-mode: overlay;
+      }
+      .tap-glow:active { filter: drop-shadow(0 0 12px rgba(0,212,255,0.45)); }
+      .tap-glow-low:active { filter: drop-shadow(0 0 6px rgba(0,212,255,0.25)); }
+      .header-video-frame {
+        background: linear-gradient(180deg, rgba(2,4,8,0.95), rgba(2,4,8,0.70), rgba(2,4,8,0.35), transparent);
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      }
+    }
+  </style>
+
+  <style>
+    html,
+    body {
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    body {
+      width: 100%;
+      max-width: 100%;
+      min-height: 100dvh;
+      overflow-x: hidden;
+      background: var(--bg-0);
+      color: var(--text-0);
+      box-sizing: border-box;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    canvas,
+    img,
+    svg {
+      display: block;
+      max-width: 100%;
+    }
+
+    .holo-screen,
+    .holo-layer {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    @keyframes holoPulse {
+      0%, 100% { transform: scale(1); filter: blur(28px); opacity: .28; }
+      50% { transform: scale(1.06); filter: blur(34px); opacity: .38; }
+    }
+    @keyframes drift {
+      0% { transform: translate3d(0,0,0); opacity: .35; }
+      50% { transform: translate3d(10px,-8px,0); opacity: .55; }
+      100% { transform: translate3d(0,0,0); opacity: .35; }
+    }
+    @keyframes jitter {
+      0% { transform: translate3d(0,0,0); }
+      15% { transform: translate3d(0.8px,-0.4px,0); }
+      30% { transform: translate3d(-0.6px,0.6px,0); }
+      45% { transform: translate3d(0.7px,0.2px,0); }
+      60% { transform: translate3d(-0.4px,-0.5px,0); }
+      75% { transform: translate3d(0.5px,0.6px,0); }
+      100% { transform: translate3d(0,0,0); }
+    }
+
+    @keyframes gaugeSpectrum {
+      0% { filter: hue-rotate(0deg) saturate(1.05); }
+      50% { filter: hue-rotate(-18deg) saturate(1.4); }
+      100% { filter: hue-rotate(0deg) saturate(1.05); }
+    }
+
+    @keyframes readoutFlicker {
+      0%, 100% { text-shadow: 0 0 8px rgba(250,255,0,0.45), 0 0 20px rgba(250,255,0,0.2); }
+      40% { text-shadow: 0 0 12px rgba(250,255,0,0.75), 0 0 28px rgba(255,0,255,0.24); }
+      65% { text-shadow: 0 0 10px rgba(250,255,0,0.58), 0 0 24px rgba(0,212,255,0.2); }
+    }
+
+    @keyframes holoSweep {
+      0% { transform: translateX(-120%) skewX(-20deg); opacity: 0; }
+      22% { opacity: .55; }
+      100% { transform: translateX(140%) skewX(-20deg); opacity: 0; }
+    }
+
+    @keyframes digitalShimmer {
+      0%, 100% { opacity: .9; filter: brightness(1); }
+      20% { opacity: .76; filter: brightness(1.08); }
+      22% { opacity: .93; }
+      56% { opacity: .84; filter: brightness(1.06); }
+      82% { opacity: .95; }
+    }
+
+    .holo-gauge-shell {
+      background: #000000;
+      isolation: isolate;
+      border-radius: 9999px;
+      box-shadow: inset 0 0 40px rgba(0, 212, 255, 0.08), 0 0 30px rgba(0, 212, 255, 0.08);
+      overflow: hidden;
+    }
+
+    .holo-gauge-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    .holo-scan-sweep {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .holo-scan-sweep::after {
+      content: "";
+      position: absolute;
+      inset: -25%;
+      background: linear-gradient(90deg, transparent 0%, rgba(0, 240, 255, 0.2) 40%, rgba(255, 255, 255, 0.38) 50%, rgba(0, 240, 255, 0.18) 60%, transparent 100%);
+      animation: holoSweep 3.2s linear infinite;
+    }
+
+    .digital-shimmer {
+      animation: digitalShimmer 1.35s steps(18, end) infinite;
+    }
+
+    .micro-metric {
+      text-shadow: 0 0 8px rgba(0, 212, 255, 0.24);
+    }
+
+    .gauge-spectrum {
+      animation: gaugeSpectrum 3.8s ease-in-out infinite;
+      transform-origin: center;
+    }
+
+    .neon-yellow-readout {
+      color: var(--good-0);
+      animation: readoutFlicker 1.8s ease-in-out infinite;
+    }
+
+    /* Cyber button set (replaced with clipped cyber buttons) */
+
+/* Cyberpunk clipped-glitch buttons (from attached style.css), adapted to this layout */
+.cybr-btn {
+  --primary: hsl(var(--primary-hue), 85%, calc(var(--primary-lightness, 50) * 1%));
+  --shadow-primary: hsl(var(--shadow-primary-hue), 90%, 50%);
+  --primary-hue: 180;
+  --primary-lightness: 50;
+  --color: hsl(0, 0%, 0%);
+  --font-size: 14px;
+  --shadow-primary-hue: 300;
+  --shadow-secondary-hue: 60;
+  --shadow-secondary: hsl(var(--shadow-secondary-hue), 90%, 60%);
+  --clip: polygon(0 0, 100% 0, 100% 100%, 85% 100%, 8% 100%, 0 70%);
+  --border: 4px;
+  --shimmy-distance: 5;
+  --clip-one: polygon(0 2%, 100% 2%, 100% 95%, 8% 95%, 0 70%);
+  --clip-two: polygon(0 78%, 100% 78%, 100% 100%, 8% 100%, 0 78%);
+  --clip-three: polygon(0 44%, 100% 44%, 100% 54%, 8% 54%, 0 54%);
+  --clip-four: polygon(0 0, 100% 0, 100% 0, 8% 0, 0 0);
+  --clip-five: polygon(0 0, 100% 0, 100% 0, 8% 0, 0 0);
+  --clip-six: polygon(0 40%, 100% 40%, 100% 85%, 8% 85%, 0 70%);
+  --clip-seven: polygon(0 63%, 100% 63%, 100% 80%, 8% 80%, 0 70%);
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: 56px; /* keep existing size */
+  padding: 0 16px;
+
+  font-family: "Space Grotesk", sans-serif;
+  font-style: italic; /* match the top header vibe */
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-size: var(--font-size);
+
+  border: 0;
+  outline: transparent;
+  cursor: pointer;
+
+  color: var(--color);
+  background: transparent;
+  transition: filter 0.2s, transform 0.12s;
+  clip-path: var(--clip);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.cybr-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: saturate(0.7);
+}
+
+.cybr-btn:active:not(:disabled) {
+  transform: scale(0.985);
+  filter: brightness(0.95);
+}
+
+.cybr-btn:before,
+.cybr-btn:after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: var(--clip);
+  z-index: -1;
+}
+
+.cybr-btn:before {
+  background: var(--shadow-primary);
+  transform: translate(var(--border), 0);
+}
+
+.cybr-btn:after {
+  background: var(--primary);
+}
+
+.cybr-btn__glitch {
+  position: absolute;
+  top: calc(var(--border) * -1);
+  left: calc(var(--border) * -1);
+  right: calc(var(--border) * -1);
+  bottom: calc(var(--border) * -1);
+  background: var(--shadow-primary);
+  text-shadow: 2px 2px var(--shadow-primary), -2px -2px var(--shadow-secondary);
+  clip-path: var(--clip);
+  animation: glitch 2s infinite;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-family: "Space Grotesk", sans-serif;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color);
+}
+
+.cybr-btn:hover:not(:disabled) .cybr-btn__glitch {
+  display: inline-flex;
+}
+
+.cybr-btn__glitch:before {
+  content: "";
+  position: absolute;
+  inset: var(--border);
+  clip-path: var(--clip);
+  background: var(--primary);
+  z-index: -1;
+}
+
+@keyframes glitch {
+  0% { clip-path: var(--clip-one); }
+  2%, 8% { clip-path: var(--clip-two); transform: translate(calc(var(--shimmy-distance) * -1%), 0); }
+  6% { clip-path: var(--clip-two); transform: translate(calc(var(--shimmy-distance) * 1%), 0); }
+  9% { clip-path: var(--clip-two); transform: translate(0, 0); }
+  10% { clip-path: var(--clip-three); transform: translate(calc(var(--shimmy-distance) * 1%), 0); }
+  13% { clip-path: var(--clip-three); transform: translate(0, 0); }
+  14%, 21% { clip-path: var(--clip-four); transform: translate(calc(var(--shimmy-distance) * 1%), 0); }
+  25% { clip-path: var(--clip-five); transform: translate(calc(var(--shimmy-distance) * 1%), 0); }
+  30% { clip-path: var(--clip-five); transform: translate(calc(var(--shimmy-distance) * -1%), 0); }
+  35%, 45% { clip-path: var(--clip-six); transform: translate(calc(var(--shimmy-distance) * -1%)); }
+  40% { clip-path: var(--clip-six); transform: translate(calc(var(--shimmy-distance) * 1%)); }
+  50% { clip-path: var(--clip-six); transform: translate(0, 0); }
+  55% { clip-path: var(--clip-seven); transform: translate(calc(var(--shimmy-distance) * 1%), 0); }
+  60% { clip-path: var(--clip-seven); transform: translate(0, 0); }
+  31%, 61%, 100% { clip-path: var(--clip-four); }
+}
+
+/* Theme-driven cybr button variants */
+.cybr-btn.holo-btn-primary,
+.cybr-btn.holo-btn-good,
+.cybr-btn.holo-btn-warn,
+.cybr-btn.holo-btn-secondary {
+  --color: #000;
+  --primary: var(--btn-color);
+  --shadow-primary: color-mix(in srgb, var(--btn-color) 68%, white 32%);
+  --shadow-secondary: color-mix(in srgb, var(--btn-glow) 70%, white 30%);
+}
+
+.cybr-btn.holo-btn-primary .cybr-btn__glitch,
+.cybr-btn.holo-btn-good .cybr-btn__glitch,
+.cybr-btn.holo-btn-warn .cybr-btn__glitch,
+.cybr-btn.holo-btn-secondary .cybr-btn__glitch {
+  background: var(--shadow-primary);
+  text-shadow: 2px 2px var(--shadow-primary), -2px -2px var(--shadow-secondary);
+}
+
+.cybr-btn.holo-btn-primary .cybr-btn__glitch:before,
+.cybr-btn.holo-btn-good .cybr-btn__glitch:before,
+.cybr-btn.holo-btn-warn .cybr-btn__glitch:before,
+.cybr-btn.holo-btn-secondary .cybr-btn__glitch:before {
+  background: var(--primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+      * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+    }
+    /* === Config screen controls styling === */
+    .toggle {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 3rem;
+      height: 1.4rem;
+      background-color: rgba(255,255,255,0.05);
+      border: 1px solid var(--toggle-border, var(--accent-0));
+      border-radius: 9999px;
+      position: relative;
+      cursor: pointer;
+      outline: none;
+      transition: background-color 0.3s, border-color 0.3s;
+    }
+    .toggle::after {
+      content: "";
+      position: absolute;
+      top: 0.1rem;
+      left: 0.1rem;
+      width: 1.2rem;
+      height: 1.2rem;
+      background-color: var(--toggle-knob, var(--accent-0));
+      border-radius: 9999px;
+      transition: transform 0.3s, background-color 0.3s;
+      box-shadow: 0 0 6px var(--toggle-knob, var(--accent-0));
+    }
+    .toggle:checked {
+      background-color: rgba(157,80,187,0.3);
+      border-color: var(--accent-1);
+    }
+    .toggle:checked::after {
+      transform: translateX(1.6rem);
+      background-color: var(--accent-1);
+      box-shadow: 0 0 6px var(--accent-1);
+    }
+    /* Range slider styling */
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 4px;
+      background: color-mix(in srgb, var(--accent-0) 30%, transparent);
+      border-radius: 2px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: var(--accent-0);
+      border-radius: 50%;
+      margin-top: -5px;
+      box-shadow: 0 0 6px var(--accent-0);
+    }
+    input[type="range"]::-moz-range-track {
+      height: 4px;
+      background: color-mix(in srgb, var(--accent-0) 30%, transparent);
+      border-radius: 2px;
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      background: var(--accent-0);
+      border-radius: 50%;
+      border: none;
+      box-shadow: 0 0 6px var(--accent-0);
+    }
+    /* Neon button style */
+    :root {
+      --neon-yellow-green: var(--good-0);
+      --neon-yellow-green-glow: color-mix(in srgb, var(--good-0) 56%, transparent);
+    }
+    .btn-neon {
+      position: relative;
+      padding: 0.6rem 1.2rem;
+      font-size: 0.8rem;
+      font-weight: 900;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      border: 2px solid currentColor;
+      border-radius: 0.375rem;
+      color: var(--btn-color, #00d4ff);
+      background: linear-gradient(140deg, rgba(4, 4, 4, 0.95), rgba(12, 4, 16, 0.92));
+      overflow: hidden;
+      transition: color 0.3s, transform 0.16s ease;
+      font-family: "Orbitron", sans-serif;
+      text-shadow: 0 0 8px color-mix(in srgb, var(--btn-color, #00d4ff) 60%, transparent);
+      animation: navFlux 2.8s ease-in-out infinite;
+    }
+    .btn-neon::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--btn-glow, rgba(0,212,255,0.3));
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: -1;
+      filter: blur(8px);
+    }
+    .btn-neon:hover {
+      color: #000;
+      transform: translateY(-1px) scale(1.02);
+    }
+    .btn-neon:hover::before {
+      opacity: 1;
+    }
+
+    /* Additional animations and holographic device styles */
+    /* Rotate animations for spinning rings around the WiFi symbol */
+    @keyframes revolve {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes revolve-reverse {
+      from { transform: rotate(360deg); }
+      to { transform: rotate(0deg); }
+    }
+    .spin-slow {
+      animation: revolve 30s linear infinite;
+    }
+    .spin-slower {
+      animation: revolve-reverse 50s linear infinite;
+    }
+    /* Electrify effect for icons */
+    @keyframes electrify {
+      0%, 100% {
+        filter: drop-shadow(0 0 2px var(--glow-color)) brightness(1);
+      }
+      50% {
+        filter: drop-shadow(0 0 8px var(--glow-color)) brightness(1.4);
+      }
+    }
+    .electrify {
+      animation: electrify 2s infinite;
+    }
+    /* Device card styles */
+    .shard-card {
+      background: rgba(0, 0, 0, 0.96);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      transform-style: preserve-3d;
+      transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+      position: relative;
+      overflow: hidden;
+      clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+      contain: content;
+      touch-action: pan-y;
+    }
+    .shard-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 40%, transparent 60%, rgba(0, 0, 0, 0.4) 100%);
+      z-index: -1;
+      pointer-events: none;
+    }
+    .shard-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 2px;
+      padding: 1px;
+      background: linear-gradient(45deg, transparent, var(--edge-color, #00ff9d), transparent);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      opacity: 0.55;
+      pointer-events: none;
+    }
+    .shard-card:hover {
+      transform: translateY(-1px);
+      border-color: color-mix(in srgb, var(--edge-color, #00d4ff) 60%, #ffffff 40%);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--edge-color, #00d4ff) 42%, transparent);
+      z-index: 10;
+    }
+    .shard-card:active {
+      border-color: color-mix(in srgb, var(--edge-color, #00d4ff) 80%, #ffffff 20%);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--edge-color, #00d4ff) 78%, transparent), 0 0 18px var(--glow-color, rgba(0, 212, 255, 0.32));
+      z-index: 10;
+    }
+    .device-rim-icon {
+      border: 1px solid color-mix(in srgb, var(--edge-color, #00d4ff) 40%, transparent);
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.14), transparent 55%), rgba(0, 8, 14, 0.92);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04), 0 0 14px color-mix(in srgb, var(--edge-color, #00d4ff) 18%, transparent);
+    }
+    .holo-meter-track {
+      height: 6px;
+      border-radius: 99px;
+      background: linear-gradient(90deg, rgba(0, 212, 255, 0.08), rgba(157, 80, 187, 0.22));
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.14);
+    }
+    .holo-meter-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, color-mix(in srgb, var(--edge-color, #00d4ff) 65%, #9d50bb 35%), #d6ffff);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--edge-color, #00d4ff) 25%, transparent);
+    }
+    .signal-pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--edge-color, #00d4ff);
+      box-shadow: 0 0 10px color-mix(in srgb, var(--edge-color, #00d4ff) 35%, transparent);
+      animation: pulseBeacon 1.8s ease-in-out infinite;
+    }
+    @keyframes pulseBeacon {
+      0%, 100% { transform: scale(0.82); opacity: 0.58; }
+      50% { transform: scale(1); opacity: 0.95; }
+    }
+    .holo-state-card {
+      background: linear-gradient(130deg, rgba(0, 10, 16, 0.95), rgba(2, 4, 8, 0.98));
+      border: 1px solid rgba(0,212,255,0.25);
+      box-shadow: inset 0 0 28px rgba(0,212,255,0.04);
+    }
+    .liquid-bar-container {
+      background: rgba(0, 0, 0, 0.8);
+      border-radius: 4px;
+      box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.8), inset -1px -1px 2px rgba(255, 255, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .liquid-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--bar-start) 0%, var(--bar-mid) 50%, var(--bar-end) 100%);
+      position: relative;
+      box-shadow: 0 0 10px var(--bar-mid);
+    }
+    .liquid-bar-fill::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 50%;
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), transparent);
+    }
+    .model-cube {
+      width: 40px;
+      height: 40px;
+      position: relative;
+      transform-style: preserve-3d;
+      animation: cube-spin 8s linear infinite;
+    }
+    .cube-face {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--model-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cube-face.front { transform: rotateY(0deg) translateZ(20px); }
+    .cube-face.back { transform: rotateY(180deg) translateZ(20px); }
+    .cube-face.right { transform: rotateY(90deg) translateZ(20px); }
+    .cube-face.left { transform: rotateY(-90deg) translateZ(20px); }
+    .cube-face.top { transform: rotateX(90deg) translateZ(20px); }
+    .cube-face.bottom { transform: rotateX(-90deg) translateZ(20px); }
+    @keyframes cube-spin {
+      0% { transform: rotateX(-15deg) rotateY(0deg); }
+      100% { transform: rotateX(-15deg) rotateY(360deg); }
+    }
+    .shadow-neon { box-shadow: 0 0 5px var(--good-0), 0 0 15px var(--good-0); }
+    .shadow-neon-cyan { box-shadow: 0 0 5px var(--accent-0), 0 0 15px var(--accent-0); }
+    .shadow-neon-orange { box-shadow: 0 0 10px var(--warn-0), 0 0 25px var(--warn-0); }
+    .shadow-purple { box-shadow: 0 0 10px var(--accent-1), 0 0 20px var(--accent-1); }
+
+    /* Additional HUD classes from Wifi_map for map screen */
+    .glitch-text {
+      text-shadow: 2px 0 var(--accent-0), -2px 0 var(--accent-1);
+      letter-spacing: -0.05em;
+    }
+    .shard-clip {
+      clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
+    }
+    .shard-clip-alt {
+      clip-path: polygon(0 15%, 95% 0, 100% 85%, 5% 100%);
+    }
+    .radar-ring {
+      border: 1px solid color-mix(in srgb, var(--accent-0) 30%, transparent);
+      border-radius: 50%;
+      position: absolute;
+    }
+    .lightning-line {
+      background: linear-gradient(90deg, transparent, var(--accent-0), transparent);
+      height: 1px;
+      filter: blur(1px);
+    }
+    /* Wireframe and digital rain overlays used in the WiFi map screen */
+    .wireframe-bg {
+      background-image:
+        linear-gradient(to right, color-mix(in srgb, var(--grid-0) 55%, transparent) 1px, transparent 1px),
+        linear-gradient(to bottom, color-mix(in srgb, var(--grid-0) 55%, transparent) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    .digital-rain-overlay {
+      background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--accent-0) 12%, transparent) 50%, transparent 100%);
+      background-size: 100% 200%;
+    }
+    /* Triangular shard clipping used for the overdrive/cloak buttons from wifi_map */
+    .shard-clip {
+      clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
+    }
+    .shard-clip-alt {
+      clip-path: polygon(0 15%, 95% 0, 100% 85%, 5% 100%);
+    }
+    /* Conic gradient used for the engine gauge to restore the missing blue and red arcs. The mask ensures the center remains transparent. */
+    .gauge-conic {
+      background: conic-gradient(from 225deg, transparent 0deg, var(--accent-0) 40deg, var(--ring-0) 180deg, var(--warn-0) 240deg, transparent 270deg);
+      mask: radial-gradient(transparent 65%, black 66%);
+      -webkit-mask: radial-gradient(transparent 65%, black 66%);
+    }
+    /* Neon glow for WiFi list cards and headings */
+    .neon-glow {
+      text-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
+    }
+    /* Slight flicker effect for bars in the WiFi list */
+    .flicker {
+      opacity: 0.8;
+    }
+    /* Frosted glass panel effect used in WiFi list overlays and cards */
+    .glass-panel {
+      background: rgba(0, 212, 255, 0.03);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+    }
+    .app-nav {
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(1, 1, 1, 0.96), rgba(8, 3, 10, 0.95));
+      backdrop-filter: blur(18px);
+      border-top: 1px solid rgba(255, 0, 221, 0.35);
+      box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(250, 255, 0, 0.24);
+    }
+    .app-nav__grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 4px;
+      width: 100%;
+      max-width: 100%;
+      padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    .italic-heavy {
+      font-style: italic;
+      font-weight: 800;
+      transform: skewX(-5deg);
+    }
+    .nav-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      min-width: 0;
+      width: 100%;
+      min-height: 54px;
+      padding: 2px;
+      overflow: hidden;
+      color: #66e8ff;
+      transition: color 0.16s ease, transform 0.16s ease, text-shadow 0.16s ease;
+      font-family: "Orbitron", "Space Grotesk", sans-serif;
+      font-weight: 900;
+      letter-spacing: 0.07em;
+      line-height: 1;
+      text-align: center;
+      text-shadow: 0 0 8px rgba(0, 212, 255, 0.35);
+      box-sizing: border-box;
+    }
+    .nav-tab .material-symbols-outlined {
+      font-size: 24px;
+      font-variation-settings: "FILL" 0;
+    }
+    .nav-tab .nav-icon-word {
+      display: block;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: clamp(9px, 2.8vw, 12px);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-family: "Orbitron", "Space Grotesk", sans-serif;
+      font-style: italic;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .nav-tab .tab-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: clamp(8px, 2.35vw, 10px);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      line-height: 1;
+    }
+    .nav-tab:hover {
+      color: var(--neon-yellow-green);
+      text-shadow: 0 0 12px var(--neon-yellow-green-glow);
+    }
+    .nav-tab.is-active {
+      color: var(--accent-1);
+      text-shadow: 0 0 16px color-mix(in srgb, var(--accent-1) 68%, transparent), 0 0 8px color-mix(in srgb, var(--good-0) 35%, transparent);
+    }
+    .nav-tab.is-active .material-symbols-outlined {
+      font-variation-settings: "FILL" 1;
+    }
+    .nav-tab:active {
+      transform: scale(0.96);
+    }
+    .nav-tab .tab-label,
+    .nav-tab .material-symbols-outlined,
+    .nav-tab .nav-icon-word {
+      animation: navFlux 2.4s ease-in-out infinite;
+    }
+    .nav-emoji {
+      font-size: 14px;
+      line-height: 1;
+    }
+    @media (max-width: 380px) {
+      .app-nav__grid {
+        gap: 2px;
+        padding-inline: 4px;
+      }
+      .nav-tab {
+        gap: 2px;
+        min-height: 50px;
+        padding-inline: 1px;
+      }
+      .nav-tab .nav-icon-word {
+        font-size: 8px;
+        letter-spacing: 0.04em;
+      }
+      .nav-tab .tab-label {
+        gap: 2px;
+        font-size: 8px;
+        letter-spacing: 0.02em;
+      }
+      .nav-emoji {
+        font-size: 10px;
+      }
+    }
+    .holo-center-intel {
+      position: relative;
+      width: min(86%, 260px);
+      border: 1px solid color-mix(in srgb, var(--good-0) 80%, transparent);
+      background: linear-gradient(145deg, color-mix(in srgb, var(--panel-0) 90%, black), color-mix(in srgb, var(--panel-1) 86%, black));
+      border-radius: 14px;
+      box-shadow: inset 0 0 18px color-mix(in srgb, var(--accent-0) 16%, transparent), 0 0 16px color-mix(in srgb, var(--accent-1) 20%, transparent);
+      overflow: hidden;
+      padding: 10px;
+    }
+    .holo-center-intel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, transparent 0%, color-mix(in srgb, var(--neon-yellow-green) 28%, transparent) 48%, transparent 100%);
+      mix-blend-mode: screen;
+      animation: sparkFlow 3s linear infinite;
+      pointer-events: none;
+    }
+    .holo-center-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .holo-center-cell {
+      border: 1px solid color-mix(in srgb, var(--accent-1) 28%, transparent);
+      border-radius: 8px;
+      padding: 8px;
+      background: color-mix(in srgb, var(--bg-0) 72%, transparent);
+    }
+    .holo-center-label {
+      font-family: "Orbitron", sans-serif;
+      font-size: 8px;
+      letter-spacing: 0.2em;
+      color: color-mix(in srgb, var(--neon-yellow-green) 86%, white 14%);
+      text-transform: uppercase;
+    }
+    .holo-center-value {
+      font-family: "Orbitron", sans-serif;
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      color: var(--accent-0);
+      text-shadow: 0 0 10px color-mix(in srgb, var(--accent-0) 50%, transparent);
+      margin-top: 3px;
+      display: block;
+    }
+    .holo-center-value.warn {
+      color: var(--neon-yellow-green);
+      text-shadow: 0 0 10px var(--neon-yellow-green-glow);
+    }
+    .holo-center-value.hot {
+      color: var(--accent-1);
+      text-shadow: 0 0 10px color-mix(in srgb, var(--accent-1) 50%, transparent);
+    }
+    .electric-aura {
+      position: absolute;
+      width: 76%;
+      height: 76%;
+      border-radius: 9999px;
+      background: radial-gradient(circle, color-mix(in srgb, var(--accent-0) 25%, transparent) 0%, color-mix(in srgb, var(--good-0) 18%, transparent) 36%, rgba(2,4,8,0) 70%);
+      filter: blur(9px);
+      animation: holoPulse 2.6s ease-in-out infinite;
+    }
+    .map-node-dot {
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+    }
+    .holo-map-viewport {
+      touch-action: none;
+      background: #000000;
+      cursor: grab;
+    }
+    .holo-map-viewport.is-panning {
+      cursor: grabbing;
+    }
+    .holo-map-node-tooltip {
+      position: absolute;
+      z-index: 35;
+      min-width: 130px;
+      max-width: 220px;
+      padding: 8px 10px;
+      border: 1px solid rgba(0, 212, 255, 0.55);
+      background: rgba(0, 0, 0, 0.82);
+      color: #c8f7ff;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      pointer-events: none;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 0 16px rgba(0, 212, 255, 0.28);
+      transform: translate(-50%, calc(-100% - 14px));
+      opacity: 0;
+      transition: opacity 120ms linear;
+    }
+    .holo-map-node-tooltip.is-visible {
+      opacity: 1;
+    }
+    @keyframes sparkFlow {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+    @keyframes navFlux {
+      0%, 100% { filter: brightness(1) saturate(1); }
+      50% { filter: brightness(1.16) saturate(1.3); }
+    }
+    @keyframes memoryPulse {
+      0%, 100% { box-shadow: 0 0 0 1px rgba(255, 0, 221, 0.34), 0 0 12px rgba(0, 212, 255, 0.2); }
+      50% { box-shadow: 0 0 0 1px var(--neon-yellow-green-glow), 0 0 20px rgba(255, 0, 221, 0.35); }
+    }
+    .wifi-list-screen,
+    .wifi-list-screen *:not(.material-symbols-outlined) {
+      font-family: "Orbitron", "Space Grotesk", sans-serif;
+    }
+    .memory-pulse {
+      animation: memoryPulse 2.2s ease-in-out infinite;
+    }
+    .memory-word {
+      font-size: 9px;
+      letter-spacing: 0.16em;
+      font-family: "Orbitron", "Space Grotesk", sans-serif;
+      font-style: italic;
+      font-weight: 900;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .replacement-frame {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      z-index: 35;
+      background: #000;
+      display: none;
+      pointer-events: none;
+    }
+
+    .app-banner {
+      position: fixed;
+      top: max(14px, env(safe-area-inset-top));
+      left: 50%;
+      transform: translate(-50%, -12px);
+      z-index: 140;
+      width: min(calc(100% - 24px), 520px);
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid color-mix(in srgb, var(--accent-0) 36%, transparent);
+      background: color-mix(in srgb, var(--panel-0) 92%, black);
+      color: var(--text-0);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);
+      backdrop-filter: blur(14px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .app-banner.is-visible {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    .app-banner[data-level="success"] {
+      border-color: color-mix(in srgb, var(--good-0) 54%, transparent);
+    }
+
+    .app-banner[data-level="warn"] {
+      border-color: color-mix(in srgb, var(--warn-0) 54%, transparent);
+    }
+
+    .app-banner[data-level="error"] {
+      border-color: color-mix(in srgb, var(--warn-0) 72%, transparent);
+    }
+
+    .map-empty-state {
+      position: absolute;
+      inset: auto 16px 16px;
+      z-index: 28;
+    }
+
+    .map-empty-state.hidden {
+      display: none;
+    }
+
+    [data-disabled-reason] {
+      cursor: not-allowed !important;
+      opacity: 0.58;
+      filter: saturate(0.68);
+    }
+  </style>
+</head>
+
+<body class="holo-screen font-display overflow-y-auto antialiased">
+  <div class="fixed inset-0 vhs-overlay z-50 mix-blend-overlay opacity-30 pointer-events-none"></div>
+  <div id="appBanner" class="app-banner" data-level="info" role="status" aria-live="polite"></div>
+
+  <div class="fixed inset-0 z-0 overflow-hidden pointer-events-none holo-layer" id="holoParticleField">
+    <div class="absolute top-[15%] left-[20%] w-1.5 h-1.5 neural-node rounded-full blur-[2px] opacity-40" style="animation: drift 7s ease-in-out infinite;"></div>
+    <div class="absolute top-[40%] right-[10%] w-1 h-1 neural-node rounded-full blur-[1px] opacity-60" style="animation: drift 9s ease-in-out infinite;"></div>
+    <div class="absolute bottom-[30%] left-[15%] w-2 h-2 neural-node rounded-full blur-[3px] opacity-30" style="animation: drift 11s ease-in-out infinite;"></div>
+    <div class="absolute top-[70%] right-[30%] w-1 h-1 neural-node rounded-full blur-[1px] opacity-50" style="animation: drift 8s ease-in-out infinite;"></div>
+    <div class="absolute top-[25%] right-[45%] w-1.5 h-1.5 neural-node rounded-full blur-[2px] opacity-35" style="animation: drift 10s ease-in-out infinite;"></div>
+    <div class="absolute bottom-[18%] right-[18%] w-2 h-2 neural-node rounded-full blur-[3px] opacity-22" style="animation: drift 12s ease-in-out infinite;"></div>
+    <div class="absolute top-[58%] left-[8%] w-1 h-1 neural-node rounded-full blur-[1px] opacity-55" style="animation: drift 6s ease-in-out infinite;"></div>
+
+    <div class="absolute inset-0 holo-stage-glow"></div>
+    <div class="absolute inset-0 bg-gradient-to-b from-transparent via-black/80 to-black"></div>
+  </div>
+
+  <!-- WiFi List screen -->
+  <section id="wifiListScreen" class="wifi-list-screen holo-screen hidden relative flex min-h-[100dvh] w-full flex-col items-center overflow-y-auto holo-layer holo-scanlines">
+    <iframe id="networksFrame" class="replacement-frame" title="Insights graphs" hidden aria-hidden="true" tabindex="-1"></iframe>
+    <!-- Header -->
+    <div class="w-full holo-header p-4 sm:p-6 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined holo-header-icon text-xl sm:text-2xl">wifi</span>
+        <div class="flex flex-col">
+          <span class="text-[10px] sm:text-[10px] font-black tracking-[0.42em] uppercase holo-text-good" style="font-family:'Orbitron',sans-serif; animation:navFlux 2.1s ease-in-out infinite;">DEVICE_MATRIX</span>
+          <h2 class="text-sm sm:text-lg font-black leading-tight tracking-[0.08em] uppercase holo-title-strong" style="font-family:'Orbitron',sans-serif;">NEURAL_DEVICE_SCANNER</h2>
+        </div>
+      </div>
+      <button id="wifiTelemetryBtn" class="tap-glow memory-pulse size-12 rounded-full holo-orb-btn flex flex-col items-center justify-center holo-text-good" type="button" aria-label="Show device matrix telemetry">
+        <span class="memory-word">MEMORY</span>
+        <span class="text-[7px] leading-none tracking-[0.2em] uppercase">mem</span>
+      </button>
+    </div>
+    <h4 class="text-[9px] sm:text-[10px] font-black leading-normal tracking-[0.34em] px-4 py-2 text-center uppercase holo-text-good" style="font-family:'Orbitron',sans-serif; animation:navFlux 2.2s ease-in-out infinite;">DEVICE_MATRIX_ONLINE</h4>
+    <!-- Central Hologram -->
+    <div class="relative w-full flex justify-center p-4">
+      <div class="relative w-64 h-64 sm:w-72 sm:h-72 flex items-center justify-center overflow-hidden">
+        <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle, var(--accent-0) 1px, transparent 1px); background-size: 20px 20px;"></div>
+        <div class="absolute inset-0 rounded-full blur-3xl animate-pulse" style="background:color-mix(in srgb, var(--accent-0) 14%, transparent);"></div>
+        <div class="electric-aura" aria-hidden="true"></div>
+        <div class="relative z-10 flex items-center justify-center">
+          <div class="holo-center-intel" aria-label="Live scan telemetry">
+            <div class="holo-center-grid">
+              <div class="holo-center-cell">
+                <span class="holo-center-label">Targets</span>
+                <span id="wifiIntelCount" class="holo-center-value">0</span>
+              </div>
+              <div class="holo-center-cell">
+                <span class="holo-center-label">Gateway</span>
+                <span id="wifiIntelSignal" class="holo-center-value warn">--</span>
+              </div>
+              <div class="holo-center-cell">
+                <span class="holo-center-label">Local IP</span>
+                <span id="wifiIntelBand" class="holo-center-value">--</span>
+              </div>
+              <div class="holo-center-cell">
+                <span class="holo-center-label">Status</span>
+                <span id="wifiIntelStatus" class="holo-center-value hot">STBY</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Spinning Neon Square Frames -->
+        <!-- Outer square frame uses the same slow spin animation as the engine gauge and is colored neon yellow -->
+        <div class="absolute inset-0 border border-dashed spin-slow opacity-70 holo-border-strong" style="border-color:var(--good-0);"></div>
+        <!-- Inner square frame inset to provide depth and rotates in the opposite direction for a parallax effect -->
+        <div class="absolute inset-[10%] border border-dashed spin-slower opacity-40 holo-border" style="border-color:var(--good-0);"></div>
+      </div>
+      <!-- Overlay Data -->
+      <div class="absolute top-6 left-4 glass-panel p-2 rounded text-[9px] sm:text-[10px] font-mono italic holo-text-good">
+        LAT: 37.7749<br/>LNG: -122.4194
+      </div>
+      <div class="absolute bottom-4 right-4 glass-panel p-2 rounded text-[9px] sm:text-[10px] holo-title-strong font-mono flicker">
+        PACKETS: 1.2k/s<br/>DROPPED: 0.02%
+      </div>
+    </div>
+    <!-- Scan header -->
+    <div class="w-full px-4 py-3 flex flex-col gap-3 border-b holo-border">
+      <div class="flex items-end justify-between gap-4">
+        <div class="flex flex-col">
+          <h3 class="holo-title-strong text-xs sm:text-sm font-black leading-tight tracking-[0.18em] uppercase" style="font-family:'Orbitron',sans-serif;">Local_LAN_Discovery</h3>
+          <span id="wifiScanMeta" class="text-[9px] sm:text-[10px] font-mono holo-text-good">Waiting for LAN device data</span>
+        </div>
+        <div class="flex flex-wrap justify-end gap-2">
+          <button id="wifiScanBtn" class="btn-neon holo-btn holo-btn-secondary">⚡ Scan LAN</button>
+          <button id="wifiExportBtn" class="btn-neon holo-btn holo-btn-good">📤 Export</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div class="soft-frost holo-panel-soft rounded-lg px-3 py-2">
+          <div class="text-[9px] uppercase tracking-[0.3em] font-mono holo-text-good">Bridge</div>
+          <div id="wifiBridgeState" class="text-xs font-bold holo-title-strong mt-1">Offline</div>
+        </div>
+        <div class="soft-frost holo-panel-soft rounded-lg px-3 py-2">
+          <div class="text-[9px] uppercase tracking-[0.3em] holo-text-subtle font-mono">Permissions</div>
+          <div id="wifiPermissionState" class="text-xs font-bold holo-text-accent mt-1">No Runtime Prompt</div>
+        </div>
+        <div class="soft-frost holo-panel-soft rounded-lg px-3 py-2">
+          <div class="text-[9px] uppercase tracking-[0.3em] holo-title-strong font-mono">Scanner</div>
+          <div id="wifiScanState" class="text-xs font-bold mt-1 holo-text-good">Standby</div>
+        </div>
+      </div>
+    </div>
+    <div id="wifiEmptyState" class="w-full px-4 pt-5">
+      <div class="holo-state-card holo-panel rounded-xl px-4 py-4 text-center">
+        <div id="wifiStateBadge" class="text-[9px] tracking-[0.34em] uppercase holo-text-subtle font-black" style="font-family:'Orbitron',sans-serif;">STANDBY</div>
+        <div id="wifiStateMessage" class="mt-2 text-[11px] tracking-[0.2em] uppercase holo-text-dim font-mono">No LAN devices loaded. Tap Scan for local discovery.</div>
+      </div>
+    </div>
+    <div id="wifiDeviceList" class="flex flex-col w-full px-4 py-4 gap-4 overflow-y-auto"></div>
+  </section>
+
+  <!-- Configuration Screen -->
+  <section id="configScreen" class="holo-screen hidden relative flex min-h-[100dvh] w-full flex-col overflow-y-auto holo-layer holo-scanlines">
+    <!-- Config header -->
+    <div class="w-full holo-header p-4 sm:p-6 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined holo-header-icon text-xl sm:text-2xl">settings</span>
+        <h2 class="holo-title text-sm sm:text-lg font-bold leading-tight tracking-tight italic">System Configuration</h2>
+      </div>
+    </div>
+    <div class="w-full max-w-md mx-auto px-4 sm:px-6 py-6 flex flex-col space-y-6">
+      <!-- Toggle settings -->
+      <div class="space-y-4">
+        <label class="flex items-center justify-between">
+          <span class="text-sm holo-text-accent font-mono uppercase">Auto Scan</span>
+          <input id="cfgAutoScan" type="checkbox" class="toggle" />
+        </label>
+        <label class="flex items-center justify-between">
+          <span class="text-sm holo-text-accent font-mono uppercase">Holo FX</span>
+          <input id="cfgHoloFX" type="checkbox" class="toggle" />
+        </label>
+        <label class="flex items-center justify-between">
+          <span class="text-sm holo-text-accent font-mono uppercase">Alerts</span>
+          <input id="cfgAlerts" type="checkbox" class="toggle" />
+        </label>
+        <label class="flex items-center justify-between">
+          <span class="text-sm holo-text-accent font-mono uppercase">Fallback Mode (Disabled)</span>
+          <input id="cfgDemoMode" type="checkbox" class="toggle" />
+        </label>
+        <label class="flex items-center justify-between">
+          <span class="text-sm holo-text-accent font-mono uppercase">Native Bridge</span>
+          <input id="cfgBridgeEnabled" type="checkbox" class="toggle" />
+        </label>
+      </div>
+      <!-- Slider settings -->
+      <div class="space-y-4">
+        <label class="flex flex-col gap-1">
+          <span class="text-sm holo-text-accent font-mono uppercase">Neon Intensity</span>
+          <input id="cfgNeonIntensity" type="range" min="0" max="100" value="70" />
+        </label>
+        <label class="flex flex-col gap-1">
+          <span class="text-sm holo-text-accent font-mono uppercase">Scan Speed</span>
+          <input id="cfgScanSpeed" type="range" min="0" max="100" value="50" />
+        </label>
+      </div>
+      <!-- Accent mode selector -->
+      <div class="flex flex-col gap-1">
+        <span class="text-sm holo-text-accent font-mono uppercase">Accent Mode</span>
+        <select id="cfgAccentMode" class="holo-input text-sm p-2 rounded focus:outline-none">
+          <option value="blue">Blue</option>
+          <option value="violet">Violet</option>
+          <option value="pink">Pink</option>
+          <option value="green">Green</option>
+        </select>
+      </div>
+      <!-- Performance mode selector -->
+      <div class="flex flex-col gap-1">
+        <span class="text-sm holo-text-accent font-mono uppercase">Performance Mode</span>
+        <select id="cfgPerfMode" class="holo-input text-sm p-2 rounded focus:outline-none">
+          <option value="high">High FX</option>
+          <option value="low">Low FX</option>
+        </select>
+      </div>
+      <!-- Buttons -->
+      <div class="flex justify-start gap-4 pt-4">
+        <button id="cfgSaveBtn" class="btn-neon holo-btn holo-btn-primary">💾 Save</button>
+        <button id="cfgResetBtn" class="btn-neon holo-btn holo-btn-warn">♻️ Reset</button>
+      </div>
+      <div class="space-y-3 holo-panel rounded-lg p-4 soft-frost">
+        <div>
+          <div class="text-[10px] uppercase tracking-[0.3em] holo-text-subtle font-mono">Bridge State</div>
+          <div id="cfgBridgeSummary" class="text-sm holo-text-accent mt-1">Checking native layer...</div>
+        </div>
+        <div>
+          <div class="text-[10px] uppercase tracking-[0.3em] holo-text-subtle font-mono">Device Info</div>
+          <div id="cfgDeviceSummary" class="text-sm holo-text-dim mt-1">No device snapshot yet.</div>
+        </div>
+        <div class="flex flex-wrap gap-3 pt-1">
+          <button id="cfgRefreshDeviceBtn" class="btn-neon holo-btn holo-btn-good">🧠 Refresh Device</button>
+          <button id="cfgExportDiagBtn" class="btn-neon holo-btn holo-btn-secondary">🛰️ Export Diag</button>
+        </div>
+      </div>
+      <p id="cfgStatusMsg" class="text-[10px] holo-text-accent-strong uppercase mt-2 hidden">Settings saved.</p>
+    </div>
+  </section>
+
+
+  <!-- WiFi Map Screen -->
+  <section id="wifiMapScreen" class="holo-screen hidden relative flex min-h-[100dvh] w-full flex-col overflow-hidden holo-layer holo-scanlines">
+    <iframe id="nodesFrame" class="replacement-frame" title="Public nodes" hidden aria-hidden="true" tabindex="-1"></iframe>
+    <!-- Map header -->
+    <div class="w-full flex items-center justify-between p-4 sm:p-6 holo-header">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined holo-header-icon text-xl sm:text-2xl">public</span>
+        <h2 class="holo-title text-sm sm:text-lg font-bold leading-tight tracking-tight italic glitch-text">*</h2>
+        <h2 class="holo-title text-sm sm:text-lg font-bold leading-tight tracking-tight italic glitch-text">LOCAL_NET_CONSTELLATION</h2>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="flex flex-col items-end">
+          <span class="text-[9px] holo-text-subtle uppercase">Sys_Load</span>
+          <div class="h-1 w-16 rounded-full overflow-hidden holo-panel-soft">
+            <div class="h-full w-2/3" style="background:var(--accent-0);"></div>
+          </div>
+        </div>
+        <button id="mapDeviceMatrixBtn" class="tap-glow size-9 rounded-full holo-orb-btn flex items-center justify-center" type="button" aria-label="Open device matrix">
+          <span class="material-symbols-outlined">computer</span>
+        </button>
+      </div>
+    </div>
+    <!-- Map inner area -->
+    <div class="relative flex-1 flex flex-col overflow-hidden">
+      <!-- Wireframe and rain effects -->
+      <div class="absolute inset-0 wireframe-bg opacity-40 pointer-events-none"></div>
+      <div class="absolute inset-0 digital-rain-overlay pointer-events-none"></div>
+      <!-- Title and protocol -->
+      <div class="p-4 pt-6 z-10">
+        <p class="holo-title italic text-xl sm:text-2xl font-bold leading-tight tracking-tighter uppercase glitch-text">
+          *LOCAL_NET_CONSTELLATION*
+        </p>
+        <p class="text-[9px] holo-text-subtle font-mono mt-1 tracking-widest uppercase">
+          Protocol: Native_Scan_Backend // Active_Nodes: <span id="mapActiveNodes">0</span>
+        </p>
+      </div>
+      <!-- Map interactive area -->
+      <div class="flex-1 relative">
+        <div class="absolute inset-0 flex items-center justify-center">
+          <div class="relative w-full h-full p-4">
+            <!-- Map container -->
+            <div class="w-full h-full rounded-lg holo-panel-strong relative overflow-hidden flex items-center justify-center">
+              <!-- Top-left control icons -->
+              <div class="absolute top-4 left-4 z-20 flex flex-col gap-2 holo-panel-soft p-2 rounded">
+                <span class="material-symbols-outlined holo-text-accent text-sm">filter_center_focus</span>
+                <span class="material-symbols-outlined holo-text-accent text-sm">layers</span>
+              </div>
+              <!-- Central radar -->
+              <div class="relative w-full h-full flex items-center justify-center">
+                <div id="holoMapViewport" class="absolute inset-0 holo-map-viewport">
+                  <canvas id="holoMapCanvas" class="absolute inset-0 w-full h-full"></canvas>
+                  <div id="holoMapTooltip" class="holo-map-node-tooltip"></div>
+                </div>
+                <!-- Central numeric indicator -->
+                <div class="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full border-2 holo-border-strong overflow-hidden bg-black/80 flex items-center justify-center" style="box-shadow:0 0 30px color-mix(in srgb, var(--accent-0) 40%, transparent);">
+                  <div class="absolute inset-0" style="background:linear-gradient(135deg, color-mix(in srgb, var(--accent-1) 26%, transparent), transparent, color-mix(in srgb, var(--accent-0) 18%, transparent));"></div>
+                  <div class="relative z-10 flex flex-col items-center justify-center">
+                    <div id="mapValue" class="holo-text-accent text-5xl sm:text-6xl font-black italic opacity-80 glitch-text">0</div>
+                    <div id="mapGatewayLabel" class="text-[8px] uppercase tracking-[0.2em] holo-text-good font-mono max-w-[88px] truncate text-center">Gateway</div>
+                  </div>
+                  <div class="absolute inset-0 border-[6px] sm:border-[8px] rounded-full" style="border-color:color-mix(in srgb, var(--accent-0) 20%, transparent); border-style:dotted;"></div>
+                </div>
+              </div>
+              <!-- Search & sliders -->
+              <div class="absolute bottom-4 left-4 right-4 flex flex-col gap-4">
+                <div class="flex items-center gap-3 holo-panel-soft p-3 rounded">
+                  <span class="material-symbols-outlined holo-text-accent text-sm">search</span>
+                  <input id="mapSearchInput" class="holo-input bg-transparent border-none holo-text-accent text-xs focus:ring-0 w-full uppercase" placeholder="SEARCH HOSTNAME IP OR MAC..." />
+                </div>
+                <div class="flex justify-between items-center px-2">
+                  <div class="flex flex-col gap-1 w-24">
+                    <div class="h-1 rounded-full relative" style="background:color-mix(in srgb, var(--accent-0) 18%, transparent);">
+                      <div class="absolute left-1/3 size-3 -top-1 rounded-full holo-dot"></div>
+                    </div>
+                    <span class="text-[8px] holo-text-subtle uppercase">Zoom_Lvl</span>
+                  </div>
+                  <div class="flex flex-col gap-1 w-24">
+                    <div class="h-1 rounded-full relative" style="background:color-mix(in srgb, var(--accent-0) 18%, transparent);">
+                      <div class="absolute left-2/3 size-3 -top-1 rounded-full holo-dot"></div>
+                    </div>
+                    <span class="text-[8px] holo-text-subtle uppercase">Scan_Freq</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Node summary cards -->
+      <div id="mapNodesList" class="px-4 py-6 grid grid-cols-2 gap-4"></div>
+      <div id="mapEmptyState" class="map-empty-state hidden">
+        <div class="holo-panel rounded-xl p-4 soft-frost max-w-xs">
+          <div class="text-[10px] uppercase tracking-[0.28em] holo-text-subtle font-mono">No Topology Yet</div>
+          <p class="mt-2 text-[11px] leading-relaxed holo-text-dim font-mono">Run a LAN scan to populate this constellation view.</p>
+          <button id="mapRunScanBtn" class="btn-neon holo-btn holo-btn-secondary mt-3 w-full" type="button">Run Scan</button>
+        </div>
+      </div>
+      <!-- Overdrive and Cloak buttons (adapted from wifi_map.html) -->
+      <div class="absolute bottom-32 left-4 flex flex-col gap-3 z-30">
+        <!-- Overdrive button -->
+        <button id="mapOverdriveBtn" class="shard-clip-alt holo-panel-soft holo-text-accent font-black px-4 py-2 uppercase italic flex items-center gap-1 tap-glow" type="button">
+          <span class="material-symbols-outlined text-sm">bolt</span>
+          Overdrive
+        </button>
+        <!-- Cloak button -->
+        <button id="mapCloakBtn" class="shard-clip holo-panel-soft holo-text-accent font-black px-4 py-2 uppercase italic flex items-center gap-1 tap-glow" type="button">
+          <span class="material-symbols-outlined text-sm">shield_with_heart</span>
+          Cloak
+        </button>
+      </div>
+      <!-- Anomaly detection card -->
+      <div id="mapAlertCard" class="absolute bottom-32 right-4 holo-panel-soft p-3 w-44 z-30" style="border-color:color-mix(in srgb, var(--warn-0) 46%, transparent);">
+        <div class="flex items-center gap-2 mb-1">
+          <div class="size-2 rounded-full holo-dot-warn"></div>
+          <div id="mapScanStatus" class="text-[10px] holo-text-warn uppercase font-black">Awaiting Live Scan</div>
+        </div>
+        <div id="mapAlertText" class="holo-text-dim font-mono text-[9px] leading-tight">
+          Trigger Scan To Populate<br/>
+          Last Sync: <span id="mapLastSync">Never</span><br/>
+          Source: Native Bridge
+        </div>
+      </div>
+    </div>
+    <!-- Pulses bottom center -->
+    <div class="absolute inset-x-0 bottom-20 h-12 flex justify-center pointer-events-none">
+      <div class="w-full max-w-xs h-full flex items-center justify-around">
+        <div class="size-1 rounded-full" style="background:color-mix(in srgb, var(--accent-0) 40%, transparent);"></div>
+        <div class="size-1.5 rounded-full holo-dot"></div>
+        <div class="size-1 rounded-full" style="background:color-mix(in srgb, var(--accent-0) 40%, transparent);"></div>
+      </div>
+    </div>
+  </section>
+
+  <div id="engineScreen" class="holo-screen relative flex min-h-[100dvh] w-full flex-col justify-between holo-layer holo-scanlines">
+    <iframe id="speedFrame" class="replacement-frame" title="Speedtest" hidden aria-hidden="true" tabindex="-1"></iframe>
+
+    <!-- Header video (speed.mp4) -->
+    <div class="relative z-30 w-full header-video-frame">
+      <div class="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4">
+        <div class="w-full rounded-xl overflow-hidden holo-panel-soft">
+          <video
+            id="headerVid"
+            class="w-full max-h-[140px] sm:max-h-[180px] object-contain bg-black"
+            src="speed.mp4"
+            autoplay
+            muted
+            loop
+            playsinline
+          ></video>
+        </div>
+      </div>
+    </div>
+
+    <header class="relative z-20 flex flex-wrap items-start justify-between gap-3 p-4 pt-3 sm:p-6 sm:pt-6 bg-gradient-to-b from-void-black/75 to-transparent">
+      <div class="flex min-w-0 flex-col">
+        <span class="text-[10px] tracking-[0.3em] holo-text-subtle font-mono uppercase">SYSTEM STATUS</span>
+        <h2 class="text-sm sm:text-base leading-tight flex items-center gap-2 italic-heavy chromatic-aberration holo-text-good">
+          <span class="material-symbols-outlined text-base">terminal</span>
+          PSYCHO-ENGINE / HOLO MERGE
+        </h2>
+        <span id="speedEngineMode" class="mt-1 text-[9px] holo-text-subtle font-mono uppercase tracking-[0.22em]">Native Engine Ready</span>
+      </div>
+
+      <div class="relative z-40 flex shrink-0 items-center gap-3">
+        <div class="text-right hidden sm:block">
+          <p class="text-[10px] holo-text-dim uppercase font-mono">Neural Link</p>
+          <p class="text-xs font-bold holo-text-accent-strong font-mono tracking-widest">ENCRYPTED</p>
+        </div>
+
+        <button id="btnTheme" class="theme-launch tap-glow holo-orb-btn holo-focus-ring" type="button" aria-label="Open speedtest theme picker" aria-haspopup="dialog" aria-controls="speedtestThemeModal" aria-expanded="false">
+          <span class="material-symbols-outlined theme-launch__icon" aria-hidden="true">palette</span>
+          <span>THEME</span>
+        </button>
+
+        <button id="btnSettings" class="tap-glow size-10 rounded-full holo-orb-btn flex items-center justify-center" type="button">
+          <span class="material-symbols-outlined">settings_input_component</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="relative z-20 flex-1 min-h-0 flex flex-col items-center justify-center px-4 sm:px-6 perspective-center">
+      <div class="absolute inset-0 z-0 opacity-20">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_#020408_70%)] z-10"></div>
+        <div class="w-full h-full bg-center bg-cover scale-110"
+             style="background-image:
+               radial-gradient(circle at 50% 35%, rgba(0, 212, 255, 0.16), transparent 34%),
+               radial-gradient(circle at 50% 58%, rgba(157, 80, 187, 0.14), transparent 40%),
+               linear-gradient(135deg, #000000 0%, #000000 100%);">
+        </div>
+      </div>
+
+      <div class="relative z-10 flex flex-col items-center w-full max-w-sm sm:max-w-md">
+
+        <div class="absolute -top-12 left-0 right-0 flex justify-between px-6 opacity-90 rotate-x-25" aria-hidden="true">
+          <div class="flex flex-col items-start border-l-2 holo-border-strong pl-2">
+            <span class="text-[9px] holo-text-accent uppercase tracking-widest font-mono">Heat Level</span>
+            <span id="heatLabel" class="text-sm font-black holo-text-accent">IDLE</span>
+          </div>
+          <div class="flex flex-col items-end border-r-2 pr-2" style="border-color:color-mix(in srgb, var(--accent-1) 40%, transparent);">
+            <span class="text-[9px] holo-text-accent-strong uppercase tracking-widest font-mono">Pressure</span>
+            <span id="pressureLabel" class="text-sm font-black holo-text-accent-strong">STABLE</span>
+          </div>
+        </div>
+
+        <div class="relative group w-full flex items-center justify-center">
+          <div id="aura" class="absolute -inset-10 blur-3xl rounded-full" style="animation: holoPulse 4.5s ease-in-out infinite;"></div>
+          <!-- Spinning diamond frame around the gauge -->
+          <div class="absolute -inset-6 sm:-inset-8 rounded-3xl rotate-45 opacity-55 border-2 animate-[spin_60s_linear_infinite]" style="border-color:color-mix(in srgb, var(--accent-1) 55%, transparent);"></div>
+          <div class="absolute -inset-10 sm:-inset-12 rounded-3xl rotate-45 opacity-50 border-2 border-dashed animate-[spin_72s_linear_infinite_reverse]" style="border-color:color-mix(in srgb, var(--good-0) 72%, transparent);"></div>
+
+          <div class="relative size-64 sm:size-80 flex items-center justify-center transform-gpu holo-gauge-shell">
+            <canvas id="gaugeParticlesCanvas" class="holo-gauge-canvas opacity-45"></canvas>
+            <canvas id="gaugeCompositeCanvas" class="holo-gauge-canvas opacity-95"></canvas>
+
+            <div class="absolute inset-2 rounded-full border" style="border-color:color-mix(in srgb, var(--accent-0) 15%, transparent);"></div>
+            <div class="absolute inset-0 gauge-conic opacity-35"></div>
+
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div id="needlePivot" class="absolute w-full h-full flex items-center justify-center" style="transform: rotate(140deg); will-change: transform;">
+                <div class="relative w-44 sm:w-52 flex items-center justify-end origin-left">
+                  <div id="needleBeam" class="w-28 sm:w-32 h-[2px] rounded-full"></div>
+                  <div id="needleTipGlow" class="absolute -right-1 w-2.5 h-2.5 rounded-full blur-[1px]"></div>
+                </div>
+                <div id="needleBaseGlow" class="absolute w-40 h-14 blur-xl rounded-full -left-16 origin-right"></div>
+              </div>
+              <div id="needleCore" class="absolute w-5 h-5 rounded-full"></div>
+            </div>
+
+            <div class="relative z-20 size-48 sm:size-56 holo-panel-strong soft-frost rounded-2xl border-2 glitch-border p-4 flex flex-col items-center justify-center overflow-hidden">
+              <div class="absolute inset-0 opacity-15 scanline-mask"></div>
+              <div class="holo-scan-sweep opacity-30"></div>
+              <div class="absolute inset-0 bg-[linear-gradient(160deg,rgba(255,255,255,0.26)_0%,rgba(255,255,255,0.03)_33%,transparent_48%)] mix-blend-screen opacity-35 pointer-events-none"></div>
+
+              <div class="relative z-10 flex flex-col items-center select-none">
+                <span id="phaseLabel" class="text-[10px] tracking-[0.5em] font-mono font-bold mb-1 uppercase italic neon-yellow-readout">IDLE</span>
+
+                <div class="flex items-baseline gap-1 chromatic-aberration">
+                  <span id="mainInt" class="text-6xl sm:text-7xl font-black italic tracking-tighter leading-none neon-yellow-readout digital-shimmer" style="font-family:'Orbitron', sans-serif; letter-spacing:-0.03em;">0</span>
+                  <span id="mainFrac" class="text-xl font-black italic neon-yellow-readout digital-shimmer" style="font-family:'Orbitron', sans-serif;">.0</span>
+                </div>
+
+                <span id="unitLabel" class="text-lg font-bold tracking-widest mt-2 neon-yellow-readout">Mbps</span>
+
+                <div class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] font-mono uppercase tracking-wider holo-telemetry digital-shimmer">
+                  <span class="micro-metric">Up <span id="microUpVal" class="holo-text-accent-strong">0.0</span></span>
+                  <span class="micro-metric">Ping <span id="microPingVal" class="holo-text-accent">--</span></span>
+                  <span class="micro-metric">Jit <span id="microJitterVal" class="holo-text-accent">--</span></span>
+                  <span class="micro-metric">Loss <span id="microLossVal" class="holo-text-warn">--</span></span>
+                </div>
+
+                <div class="mt-3 flex items-center gap-2 font-mono text-[10px] holo-telemetry">
+                  <span class="inline-flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full holo-dot"></span>
+                    <span id="statusText">READY</span>
+                  </span>
+                  <span class="opacity-50">|</span>
+                  <span id="timerText" class="tracking-widest">00:00</span>
+                </div>
+              </div>
+
+              <div class="absolute bottom-0 left-0 right-0 h-16 opacity-25 data-heart-glow">
+                <svg class="w-full h-full holo-text-accent" viewBox="0 0 200 100" preserveAspectRatio="none">
+                  <path id="wavePath" d="M0 100 L20 40 L40 80 L60 20 L80 90 L100 10 L120 70 L140 30 L160 85 L180 45 L200 100 Z" fill="currentColor"></path>
+                </svg>
+              </div>
+
+              <div id="scanJitter" class="absolute inset-0 pointer-events-none opacity-0"></div>
+            </div>
+
+            <div class="absolute -top-4 -right-4 size-12 nitro-shard holo-panel-soft flex items-center justify-center">
+              <span class="material-symbols-outlined holo-text-accent-strong text-sm">bolt</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-10 sm:mt-12 grid grid-cols-3 gap-3 w-full px-2">
+          <div class="holo-metric-panel p-3 rounded-sm">
+            <p class="text-[8px] holo-metric-label uppercase font-bold tracking-widest font-mono">Latency</p>
+            <p class="text-lg font-black">
+              <span id="latencyVal">--</span><span class="text-[10px] holo-metric-unit ml-1 font-mono">MS</span>
+            </p>
+          </div>
+          <div class="holo-metric-panel p-3 rounded-sm">
+            <p class="text-[8px] holo-metric-label uppercase font-bold tracking-widest font-mono">Jitter</p>
+            <p class="text-lg font-black">
+              <span id="jitterVal">--</span><span class="text-[10px] holo-metric-unit ml-1 font-mono">MS</span>
+            </p>
+          </div>
+          <div class="holo-metric-panel p-3 rounded-sm">
+            <p class="text-[8px] holo-metric-label uppercase font-bold tracking-widest font-mono">Loss</p>
+            <p class="text-lg font-black">
+              <span id="lossVal">--</span><span class="text-[10px] holo-metric-unit ml-1 font-mono">%</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-2 gap-3 w-full px-2">
+          <div class="holo-panel-soft p-3 rounded-md">
+            <p class="text-[9px] holo-metric-label uppercase font-mono tracking-widest">Downlink</p>
+            <p class="text-sm font-mono"><span id="downVal">0.0</span> <span class="holo-text-accent">Mbps</span></p>
+          </div>
+          <div class="holo-panel-soft p-3 rounded-md">
+            <p class="text-[9px] holo-metric-label uppercase font-mono tracking-widest">Uplink</p>
+            <p class="text-sm font-mono"><span id="upVal">0.0</span> <span class="holo-text-accent-strong">Mbps</span></p>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <footer class="relative z-30 shrink-0 p-6 pb-10 sm:px-8 sm:pb-12 flex flex-col gap-6">
+      
+<div class="grid grid-cols-3 gap-3">
+        <button id="btnStart" class="cybr-btn holo-btn holo-btn-good tap-glow" type="button" aria-label="Engage">
+          <span class="cybr-btn__glitch" aria-hidden="true">ENGAGE</span>
+          ENGAGE
+        </button>
+
+        <button id="btnAbort" class="cybr-btn holo-btn holo-btn-warn tap-glow" type="button" aria-label="Abort">
+          <span class="cybr-btn__glitch" aria-hidden="true">ABORT</span>
+          ABORT
+        </button>
+
+        <button id="btnReset" class="cybr-btn holo-btn holo-btn-secondary tap-glow" type="button" aria-label="Reset">
+          <span class="cybr-btn__glitch" aria-hidden="true">RESET</span>
+          RESET
+        </button>
+      </div>
+
+      <!-- bottom nav moved outside engine screen -->
+
+      <div class="absolute bottom-24 left-0 w-full flex justify-center opacity-[0.08] pointer-events-none select-none">
+        <span class="text-[96px] sm:text-[120px] font-black tracking-tighter leading-none">OVERDRIVE</span>
+      </div>
+    </footer>
+
+    <!-- Vertical accent bars for engine screen -->
+    <div id="barsLeft" class="absolute top-1/2 left-4 -translate-y-1/2 flex flex-col gap-1 z-0">
+      <div class="h-12 w-0.5" style="background:color-mix(in srgb, var(--accent-0) 30%, transparent);"></div>
+      <div class="h-2 w-0.5" style="background:var(--accent-1);"></div>
+      <div class="h-20 w-0.5" style="background:color-mix(in srgb, var(--accent-0) 10%, transparent);"></div>
+    </div>
+    <div id="barsRight" class="absolute top-1/2 right-4 -translate-y-1/2 flex flex-col gap-1 z-0 items-end">
+      <div class="h-20 w-0.5" style="background:color-mix(in srgb, var(--accent-0) 10%, transparent);"></div>
+      <div class="h-2 w-0.5" style="background:var(--accent-0);"></div>
+      <div class="h-12 w-0.5" style="background:color-mix(in srgb, var(--accent-1) 30%, transparent);"></div>
+    </div>
+
+  </div>
+
+
+  <!-- Global bottom navigation -->
+  <nav id="bottomNav" class="app-nav fixed bottom-0 left-0 right-0 z-40">
+    <div class="app-nav__grid">
+      <button id="navEngine" class="nav-tab italic-heavy flex-1" type="button" aria-label="Core engine tab">
+        <span class="nav-icon-word" aria-hidden="true">SPEED</span>
+        <span class="tab-label"><span class="nav-emoji" aria-hidden="true">⚙️</span> Core</span>
+      </button>
+      <button id="navList" class="nav-tab italic-heavy flex-1" type="button" aria-label="Device list tab">
+        <span class="nav-icon-word" aria-hidden="true">INSIGHTS</span>
+        <span class="tab-label"><span class="nav-emoji" aria-hidden="true">📡</span> Graph</span>
+      </button>
+      <button id="navMap" class="nav-tab italic-heavy flex-1" type="button" aria-label="Network map tab">
+        <span class="nav-icon-word" aria-hidden="true">PUBLIC</span>
+        <span class="tab-label"><span class="nav-emoji" aria-hidden="true">🛰️</span> Nodes</span>
+      </button>
+      <button id="navConfig" class="nav-tab italic-heavy flex-1" type="button" aria-label="Security settings tab">
+        <span class="nav-icon-word" aria-hidden="true">SAFETY</span>
+        <span class="tab-label"><span class="nav-emoji" aria-hidden="true">🛡️</span> Shield</span>
+      </button>
+    </div>
+  </nav>
+
+  <div id="speedtestThemeModal" class="theme-modal hidden" role="dialog" aria-modal="true" aria-labelledby="speedtestThemeTitle" tabindex="-1">
+    <div id="speedtestThemeBackdrop" class="theme-modal__backdrop"></div>
+    <div class="theme-modal__sheet" role="document">
+      <div class="theme-modal__header">
+        <h3 id="speedtestThemeTitle" class="theme-modal__title">Speedtest Theme</h3>
+        <button id="themeClose" class="theme-modal__close" type="button" aria-label="Close theme picker">✕</button>
+      </div>
+      <p class="theme-modal__subtitle">Theme applies to Speedtest screen only.</p>
+      <div id="themeList" class="theme-modal__list" role="listbox" aria-label="Speedtest themes"></div>
+      <p id="themeDebugLine" class="theme-debug-line" data-debug="off"></p>
+      <button id="themeReset" class="theme-modal__reset" type="button">Reset to Default</button>
+    </div>
+  </div>
+
+  <div id="deviceDetailModal" class="theme-modal hidden" role="dialog" aria-modal="true" aria-labelledby="deviceDetailTitle" tabindex="-1">
+    <div id="deviceDetailBackdrop" class="theme-modal__backdrop"></div>
+    <div class="theme-modal__sheet" role="document">
+      <div class="theme-modal__header">
+        <h3 id="deviceDetailTitle" class="theme-modal__title">LAN Device Detail</h3>
+        <button id="deviceDetailClose" class="theme-modal__close" type="button" aria-label="Close device detail">✕</button>
+      </div>
+      <p id="deviceDetailSummary" class="theme-modal__subtitle">No device selected.</p>
+      <pre id="deviceDetailJson" class="theme-modal__list" style="white-space:pre-wrap; font-size:11px; line-height:1.45; max-height:50vh; overflow:auto;"></pre>
+    </div>
+  </div>
+
+  <script src="holo-renderers.js"></script>
+  <script src="holo-motion.js"></script>
+  <script>
+    (() => {
+      const $ = (id) => document.getElementById(id);
+
+      const ui = {
+        btnStart: $("btnStart"),
+        btnAbort: $("btnAbort"),
+        btnReset: $("btnReset"),
+        btnTheme: $("btnTheme"),
+
+        heatLabel: $("heatLabel"),
+        pressureLabel: $("pressureLabel"),
+        phaseLabel: $("phaseLabel"),
+        unitLabel: $("unitLabel"),
+        statusText: $("statusText"),
+        timerText: $("timerText"),
+
+        mainInt: $("mainInt"),
+        mainFrac: $("mainFrac"),
+
+        latencyVal: $("latencyVal"),
+        jitterVal: $("jitterVal"),
+        lossVal: $("lossVal"),
+
+        downVal: $("downVal"),
+        upVal: $("upVal"),
+        microUpVal: $("microUpVal"),
+        microPingVal: $("microPingVal"),
+        microJitterVal: $("microJitterVal"),
+        microLossVal: $("microLossVal"),
+
+        needlePivot: $("needlePivot"),
+        needleBeam: $("needleBeam"),
+        needleTipGlow: $("needleTipGlow"),
+        needleBaseGlow: $("needleBaseGlow"),
+        needleCore: $("needleCore"),
+        gaugeParticlesCanvas: $("gaugeParticlesCanvas"),
+        gaugeCompositeCanvas: $("gaugeCompositeCanvas"),
+        aura: $("aura"),
+        scanJitter: $("scanJitter"),
+        wavePath: $("wavePath"),
+      };
+
+      const nativeUi = {
+        appBanner: $("appBanner"),
+        wifiDeviceList: $("wifiDeviceList"),
+        wifiEmptyState: $("wifiEmptyState"),
+        wifiScanMeta: $("wifiScanMeta"),
+        wifiBridgeState: $("wifiBridgeState"),
+        wifiPermissionState: $("wifiPermissionState"),
+        wifiScanState: $("wifiScanState"),
+        wifiStateBadge: $("wifiStateBadge"),
+        wifiStateMessage: $("wifiStateMessage"),
+        wifiIntelCount: $("wifiIntelCount"),
+        wifiIntelSignal: $("wifiIntelSignal"),
+        wifiIntelBand: $("wifiIntelBand"),
+        wifiIntelStatus: $("wifiIntelStatus"),
+        wifiTelemetryBtn: $("wifiTelemetryBtn"),
+        wifiScanBtn: $("wifiScanBtn"),
+        wifiExportBtn: $("wifiExportBtn"),
+        holoMapViewport: $("holoMapViewport"),
+        holoMapCanvas: $("holoMapCanvas"),
+        holoMapTooltip: $("holoMapTooltip"),
+        mapNodesList: $("mapNodesList"),
+        mapSearchInput: $("mapSearchInput"),
+        mapActiveNodes: $("mapActiveNodes"),
+        mapValue: $("mapValue"),
+        mapGatewayLabel: $("mapGatewayLabel"),
+        mapScanStatus: $("mapScanStatus"),
+        mapAlertText: $("mapAlertText"),
+        mapAlertCard: $("mapAlertCard"),
+        mapLastSync: $("mapLastSync"),
+        mapEmptyState: $("mapEmptyState"),
+        mapRunScanBtn: $("mapRunScanBtn"),
+        mapDeviceMatrixBtn: $("mapDeviceMatrixBtn"),
+        mapOverdriveBtn: $("mapOverdriveBtn"),
+        mapCloakBtn: $("mapCloakBtn"),
+        cfgBridgeSummary: $("cfgBridgeSummary"),
+        cfgDeviceSummary: $("cfgDeviceSummary"),
+        cfgRefreshDeviceBtn: $("cfgRefreshDeviceBtn"),
+        cfgExportDiagBtn: $("cfgExportDiagBtn"),
+        deviceDetailModal: $("deviceDetailModal"),
+        deviceDetailBackdrop: $("deviceDetailBackdrop"),
+        deviceDetailClose: $("deviceDetailClose"),
+        deviceDetailSummary: $("deviceDetailSummary"),
+        deviceDetailJson: $("deviceDetailJson"),
+        speedtestThemeModal: $("speedtestThemeModal"),
+        speedtestThemeBackdrop: $("speedtestThemeBackdrop"),
+        themeClose: $("themeClose"),
+        themeList: $("themeList"),
+        themeReset: $("themeReset"),
+        themeDebugLine: $("themeDebugLine"),
+      };
+
+      const State = Object.freeze({
+        IDLE: "IDLE",
+        PING: "PING",
+        DOWNLOAD: "DOWNLOAD",
+        UPLOAD: "UPLOAD",
+        DONE: "DONE",
+        ABORTED: "ABORTED",
+      });
+
+      let state = State.IDLE;
+
+      let cur = {
+        ping: null,
+        jitter: null,
+        loss: null,
+        down: 0,
+        up: 0,
+        display: 0,
+        needleDeg: 140,
+        needleTarget: 140,
+        needleVel: 0,
+        sweepStart: 0,
+      };
+
+      let raf = 0;
+      let phaseStart = 0;
+      let runStart = 0;
+      let aborted = false;
+
+      const motion = window.HoloMotion || { clamp: (v,a,b) => Math.max(a, Math.min(b, v)), lerp: (a,b,t)=>a+(b-a)*t, spring: (c,t,s)=>c+((t-c)*s), attachParallax:()=>()=>{}, animate:(f)=>{let id=requestAnimationFrame(function loop(ts){f(ts);id=requestAnimationFrame(loop);}); return ()=>cancelAnimationFrame(id);}, reducedMotion:false };
+      const clamp = motion.clamp;
+      const ease = (x) => {
+        x = clamp(x, 0, 1);
+        return x * x * (3 - 2 * x);
+      };
+      const lerp = motion.lerp;
+      const rendererRegistry = window.HoloRenderers?.createRegistry?.() || null;
+
+      const getThemeColor = (varName, fallback = "") => {
+        try {
+          const value = getComputedStyle(document.documentElement).getPropertyValue(varName);
+          const clean = String(value || "").trim();
+          return clean || fallback;
+        } catch {
+          return fallback;
+        }
+      };
+
+      const hexToRgb = (hexValue) => {
+        const hex = String(hexValue || "").trim();
+        const normalized = hex.startsWith("#") ? hex.slice(1) : hex;
+        if (!/^[0-9a-fA-F]{3,8}$/.test(normalized)) return null;
+        const full = normalized.length === 3
+          ? normalized.split("").map((c) => c + c).join("")
+          : normalized.slice(0, 6);
+        const int = Number.parseInt(full, 16);
+        if (Number.isNaN(int)) return null;
+        return {
+          r: (int >> 16) & 255,
+          g: (int >> 8) & 255,
+          b: int & 255,
+        };
+      };
+
+      const themeRgba = (varName, alpha, fallbackHex) => {
+        const source = getThemeColor(varName, fallbackHex);
+        const rgb = hexToRgb(source) || hexToRgb(fallbackHex);
+        if (!rgb) return `rgba(255,255,255,${alpha})`;
+        return `rgba(${rgb.r},${rgb.g},${rgb.b},${alpha})`;
+      };
+
+      class HoloGaugeRenderer {
+        constructor(particlesCanvas, compositeCanvas) {
+          this.particlesCanvas = particlesCanvas;
+          this.compositeCanvas = compositeCanvas;
+          this.pCtx = particlesCanvas?.getContext("2d", { alpha: true });
+          this.cCtx = compositeCanvas?.getContext("2d", { alpha: true });
+          this.particles = Array.from({ length: 42 }, () => ({
+            x: Math.random(),
+            y: Math.random(),
+            s: 0.4 + Math.random() * 1.6,
+            v: 0.0002 + Math.random() * 0.0007,
+          }));
+          this.radius = 0;
+          this.cx = 0;
+          this.cy = 0;
+          this.pixelRatio = 1;
+          this.resize = this.resize.bind(this);
+          this.resize();
+        }
+
+        resize() {
+          const fit = (canvas) => {
+            if (!canvas) return;
+            const rect = canvas.getBoundingClientRect();
+            const ratio = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+            canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+            const ctx = canvas.getContext("2d", { alpha: true });
+            if (ctx) ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+            this.pixelRatio = ratio;
+            this.cx = rect.width * 0.5;
+            this.cy = rect.height * 0.5;
+            this.radius = Math.min(rect.width, rect.height) * 0.47;
+          };
+          fit(this.particlesCanvas);
+          fit(this.compositeCanvas);
+        }
+
+        render(now, needleDeg, valueMbps) {
+          if (!this.pCtx || !this.cCtx) return;
+          const p = this.pCtx;
+          const c = this.cCtx;
+          const w = this.particlesCanvas.getBoundingClientRect().width;
+          const h = this.particlesCanvas.getBoundingClientRect().height;
+          const t = now * 0.001;
+          const intensity = clamp(valueMbps / 1000, 0, 1);
+          const ring0 = getVar("--ring-0", "#00d4ff");
+          const ring1 = getVar("--ring-1", "#a855f7");
+          const warn0 = getVar("--warn-0", "#ff5a1f");
+          const beam0 = getVar("--beam-0", "#00f2ff");
+          const beam1 = getVar("--beam-1", "#ffffff");
+
+          p.clearRect(0, 0, w, h);
+          p.fillStyle = getVar("--bg-0", "#000000");
+          p.fillRect(0, 0, w, h);
+          for (const dot of this.particles) {
+            dot.y += dot.v;
+            if (dot.y > 1.05) {
+              dot.y = -0.05;
+              dot.x = Math.random();
+            }
+            const x = dot.x * w;
+            const y = dot.y * h;
+            p.fillStyle = themeRgba("--particle-0", 0.08 + dot.s * 0.06, "#7df4ff");
+            p.beginPath();
+            p.arc(x, y, dot.s, 0, Math.PI * 2);
+            p.fill();
+          }
+
+          c.clearRect(0, 0, w, h);
+          c.save();
+          c.translate(this.cx, this.cy);
+
+          c.strokeStyle = themeRgba("--ring-0", 0.35, ring0);
+          c.lineWidth = 1.4;
+          c.beginPath();
+          c.arc(0, 0, this.radius, 0, Math.PI * 2);
+          c.stroke();
+
+          for (let i = 0; i <= 80; i++) {
+            const a = (-225 + i * 3.4) * (Math.PI / 180);
+            const isMajor = i % 5 === 0;
+            const r1 = this.radius - (isMajor ? 16 : 10);
+            const highWarn = i >= 66;
+            c.strokeStyle = highWarn ? themeRgba("--warn-0", 0.2 + intensity * 0.65, warn0) : themeRgba("--ring-0", 0.28, ring0);
+            c.lineWidth = isMajor ? 2.1 : 1;
+            c.beginPath();
+            c.moveTo(Math.cos(a) * r1, Math.sin(a) * r1);
+            c.lineTo(Math.cos(a) * this.radius, Math.sin(a) * this.radius);
+            c.stroke();
+          }
+
+          c.globalCompositeOperation = "lighter";
+          c.strokeStyle = themeRgba("--ring-0", 0.25, ring0);
+          c.lineWidth = 2;
+          c.beginPath();
+          c.arc(0, 0, this.radius * 0.72, t * 0.8, t * 0.8 + Math.PI * 1.35);
+          c.stroke();
+          c.strokeStyle = themeRgba("--ring-1", 0.3, ring1);
+          c.beginPath();
+          c.arc(0, 0, this.radius * 0.58, -t * 1.2, -t * 1.2 + Math.PI * 1.18);
+          c.stroke();
+
+          c.rotate((needleDeg - 90) * (Math.PI / 180));
+          const beamGrad = c.createLinearGradient(0, 0, this.radius * 0.86, 0);
+          beamGrad.addColorStop(0, "rgba(255,255,255,0)");
+          beamGrad.addColorStop(0.45, themeRgba("--beam-0", 0.5, beam0));
+          beamGrad.addColorStop(1, themeRgba("--beam-1", 0.95, beam1));
+          c.strokeStyle = beamGrad;
+          c.lineWidth = 2.6;
+          c.beginPath();
+          c.moveTo(0, 0);
+          c.lineTo(this.radius * 0.85, 0);
+          c.stroke();
+
+          c.restore();
+        }
+      }
+
+      const gaugeRenderer = new HoloGaugeRenderer(ui.gaugeParticlesCanvas, ui.gaugeCompositeCanvas);
+
+      const syncNeedleThemeStyles = (speedValue = 0) => {
+        const beam0 = getVar("--beam-0", "#00f2ff");
+        const beam1 = getVar("--beam-1", "#ffffff");
+        const accent0 = getVar("--accent-0", "#00d4ff");
+        const good0 = getVar("--good-0", "#b7ff2a");
+        const warn0 = getVar("--warn-0", "#ff5a1f");
+        const liveCore = speedValue > 780 ? warn0 : speedValue > 120 ? accent0 : good0;
+
+        if (ui.needleBeam) {
+          ui.needleBeam.style.background = `linear-gradient(90deg, transparent, ${beam0}, ${beam1})`;
+          ui.needleBeam.style.boxShadow = `0 0 18px ${themeRgba("--beam-0", 0.78, beam0)}`;
+        }
+        if (ui.needleTipGlow) {
+          ui.needleTipGlow.style.background = beam1;
+          ui.needleTipGlow.style.boxShadow = `0 0 12px ${themeRgba("--beam-1", 0.95, beam1)}`;
+        }
+        if (ui.needleBaseGlow) {
+          ui.needleBaseGlow.style.background = themeRgba("--accent-0", 0.14, accent0);
+        }
+        if (ui.needleCore) {
+          ui.needleCore.style.background = liveCore;
+          ui.needleCore.style.boxShadow = `0 0 18px ${themeRgba("--accent-0", 0.8, accent0)}, 0 0 30px ${themeRgba("--beam-1", 0.45, beam1)}`;
+        }
+      };
+
+      const fmt1 = (v) => (Math.round(v * 10) / 10).toFixed(1);
+      const fmtIntFrac = (v) => {
+        const fixed = fmt1(v);
+        const [i, f] = fixed.split(".");
+        return { i, f };
+      };
+
+      const setMainReadout = (v) => {
+        const { i, f } = fmtIntFrac(v);
+        ui.mainInt.textContent = i;
+        ui.mainFrac.textContent = "." + f;
+      };
+
+      const setThroughputReadout = (mbps) => {
+        if (mbps >= 1000) {
+          ui.unitLabel.textContent = "Gbps";
+          setMainReadout(mbps / 1000);
+          return;
+        }
+        ui.unitLabel.textContent = "Mbps";
+        setMainReadout(mbps);
+      };
+
+      const setNeedleAngle = (deg) => {
+        cur.needleDeg = clamp(deg, 50, 320);
+        ui.needlePivot.style.transform = `rotate(${cur.needleDeg.toFixed(2)}deg)`;
+      };
+
+      const setNeedleTarget = (deg) => {
+        cur.needleTarget = clamp(deg, 50, 320);
+      };
+
+      const advanceNeedle = (dtMs) => {
+        const dt = Math.min(0.05, dtMs / 1000);
+        const stiffness = 32;
+        const damping = 11;
+        const accel = (cur.needleTarget - cur.needleDeg) * stiffness - cur.needleVel * damping;
+        cur.needleVel += accel * dt;
+        setNeedleAngle(cur.needleDeg + cur.needleVel * dt * 95);
+      };
+
+      const updateGaugeColorProfile = (speedValue) => {
+        const value = Number(speedValue || 0);
+        const intensity = clamp(value / 1000, 0, 1);
+        const danger = clamp((value - 780) / 220, 0, 1);
+        const yellowGlow = 0.35 + intensity * 0.45;
+        const magentaGlow = 0.12 + intensity * 0.25;
+        syncNeedleThemeStyles(value);
+        ui.aura.style.background = `radial-gradient(circle, ${themeRgba("--good-0", Number(yellowGlow.toFixed(3)), "#b7ff2a")} 0%, ${themeRgba("--accent-0", Number((0.18 + intensity * 0.25).toFixed(3)), "#00d4ff")} 36%, ${themeRgba("--accent-1", Number(magentaGlow.toFixed(3)), "#a855f7")} 58%, ${themeRgba("--warn-0", Number((danger * 0.45).toFixed(3)), "#ff5a1f")} 72%, rgba(0,0,0,0) 84%)`;
+        ui.wavePath.style.color = value > 780 ? getThemeColor("--warn-0", "#ff5a1f") : value > 350 ? getThemeColor("--accent-1", "#a855f7") : value > 120 ? getThemeColor("--accent-0", "#00d4ff") : getThemeColor("--good-0", "#b7ff2a");
+        ui.scanJitter.style.background = `radial-gradient(circle at 50% 50%, ${themeRgba("--good-0", Number((0.10 + intensity * 0.24).toFixed(3)), "#b7ff2a")} 0%, ${themeRgba("--accent-1", Number((0.06 + intensity * 0.18).toFixed(3)), "#a855f7")} 45%, rgba(0,0,0,0) 80%)`;
+        ui.gaugeCompositeCanvas.style.opacity = (0.75 + intensity * 0.25 + danger * 0.1).toFixed(2);
+      };
+
+      const setPhase = (s) => {
+        state = s;
+        ui.phaseLabel.textContent = s;
+
+        ui.statusText.textContent =
+          s === State.IDLE ? "READY" :
+          s === State.PING ? "PROBING" :
+          s === State.DOWNLOAD ? "DOWNLINK" :
+          s === State.UPLOAD ? "UPLINK" :
+          s === State.DONE ? "COMPLETE" :
+          s === State.ABORTED ? "ABORTED" : "ACTIVE";
+
+        ui.heatLabel.textContent =
+          s === State.IDLE ? "IDLE" :
+          s === State.PING ? "WARMING" :
+          s === State.DOWNLOAD ? "CRITICAL" :
+          s === State.UPLOAD ? "CRITICAL" :
+          s === State.DONE ? "COOLING" :
+          s === State.ABORTED ? "CUT" : "ACTIVE";
+
+        ui.pressureLabel.textContent =
+          s === State.IDLE ? "STABLE" :
+          s === State.PING ? "RISING" :
+          s === State.DOWNLOAD ? "OVERLOAD" :
+          s === State.UPLOAD ? "OVERLOAD" :
+          s === State.DONE ? "VENTING" :
+          s === State.ABORTED ? "DUMPED" : "ACTIVE";
+
+        const scanning = (s === State.PING || s === State.DOWNLOAD || s === State.UPLOAD);
+        ui.scanJitter.style.opacity = scanning ? "1" : "0";
+        ui.scanJitter.style.animation = scanning ? "jitter 0.5s infinite" : "none";
+
+        ui.aura.style.opacity = scanning ? "0.72" : "0.42";
+        ui.aura.style.filter = scanning ? "blur(40px) saturate(1.25)" : "blur(30px)";
+        ui.needlePivot.parentElement.style.mixBlendMode = scanning ? "screen" : "normal";
+        const themeSignal = getThemeColor("--good-0", "#b7ff00");
+        ui.phaseLabel.style.color = themeSignal;
+        ui.unitLabel.style.color = themeSignal;
+        ui.mainInt.style.color = themeSignal;
+        ui.mainFrac.style.color = themeSignal;
+      };
+
+      const lockButtons = (locked) => {
+        ui.btnStart.disabled = locked;
+        ui.btnAbort.disabled = !locked;
+        ui.btnReset.disabled = locked;
+      };
+
+      const mmss = (ms) => {
+        const s = Math.floor(ms / 1000);
+        const m = Math.floor(s / 60);
+        const r = s % 60;
+        return String(m).padStart(2, "0") + ":" + String(r).padStart(2, "0");
+      };
+
+      const resetUI = () => {
+        aborted = false;
+        runStart = 0;
+        phaseStart = 0;
+        setPhase(State.IDLE);
+        lockButtons(false);
+
+        cur.ping = null;
+        cur.jitter = null;
+        cur.loss = null;
+        cur.down = 0;
+        cur.up = 0;
+        cur.display = 0;
+        cur.needleDeg = 140;
+        cur.needleVel = 0;
+
+        ui.latencyVal.textContent = "--";
+        ui.jitterVal.textContent = "--";
+        ui.lossVal.textContent = "--";
+        ui.downVal.textContent = "0.0";
+        ui.upVal.textContent = "0.0";
+        ui.microUpVal.textContent = "0.0";
+        ui.microPingVal.textContent = "--";
+        ui.microJitterVal.textContent = "--";
+        ui.microLossVal.textContent = "--";
+
+        ui.unitLabel.textContent = "Mbps";
+        ui.timerText.textContent = "00:00";
+
+        setMainReadout(0);
+        setNeedleAngle(cur.needleDeg);
+        setNeedleTarget(cur.needleDeg);
+        updateGaugeColorProfile(cur.display);
+        gaugeRenderer.render(performance.now(), cur.needleDeg, cur.display);
+
+        ui.wavePath.setAttribute("d", "M0 100 L20 40 L40 80 L60 20 L80 90 L100 10 L120 70 L140 30 L160 85 L180 45 L200 100 Z");
+      };
+
+      const needleForMbps = (mbps) => {
+        const max = 1000;
+        const t = clamp(mbps / max, 0, 1);
+        return lerp(50, 320, ease(t));
+      };
+
+      const updateWaveform = (timeMs, intensity01) => {
+        const wob = (i) => Math.sin((timeMs / 140) + i) * (12 + 22 * intensity01);
+        const base = [
+          [0,100],[20,40],[40,80],[60,20],[80,90],[100,10],[120,70],[140,30],[160,85],[180,45],[200,100]
+        ];
+        const pts = base.map(([x,y], idx) => {
+          const dy = wob(idx * 0.9) * (idx % 2 === 0 ? 0.35 : 0.55);
+          const ny = clamp(y + dy, 4, 98);
+          return [x, ny];
+        });
+        const d = "M" + pts.map(([x,y]) => `${x} ${y.toFixed(1)}`).join(" L ") + " Z";
+        ui.wavePath.setAttribute("d", d);
+      };
+
+      let speedtestRendererActive = false;
+
+      const isSpeedtestRunning = () => (
+        state === State.PING || state === State.DOWNLOAD || state === State.UPLOAD
+      ) && !aborted;
+
+      const stopSpeedtestLoop = () => {
+        if (!raf) return;
+        const frameId = raf;
+        raf = 0;
+        cancelAnimationFrame(frameId);
+      };
+
+      const getVar = (varName, fallback = "") => getThemeColor(varName, fallback);
+
+      const ensureSpeedtestLoop = () => {
+        if (!speedtestRendererActive || raf) return;
+        raf = requestAnimationFrame(tick);
+      };
+
+      const speedtestRendererController = {
+        start() {
+          speedtestRendererActive = true;
+          gaugeRenderer.render(performance.now(), cur.needleDeg, cur.display);
+          ensureSpeedtestLoop();
+        },
+        stop() {
+          speedtestRendererActive = false;
+          stopSpeedtestLoop();
+          lastTick = 0;
+        },
+        resize() {
+          gaugeRenderer.resize();
+          gaugeRenderer.render(performance.now(), cur.needleDeg, cur.display);
+        },
+      };
+
+      const buildSpeedtestConfig = () => ({
+        pingAttempts: 6,
+        downloadDurationMs: 10000,
+        uploadDurationMs: 8000,
+        downloadParallelism: 4,
+        uploadParallelism: 2,
+        updateIntervalMs: 150,
+        servers: [
+          {
+            id: "hetzner-ash",
+            name: "Hetzner ASH",
+            pingUrl: "https://ash-speed.hetzner.com/",
+            downloadUrl: "https://ash-speed.hetzner.com/100MB.bin",
+            uploadUrl: "https://httpbingo.org/upload",
+          },
+          {
+            id: "hetzner-fsn1",
+            name: "Hetzner FSN1",
+            pingUrl: "https://fsn1-speed.hetzner.com/",
+            downloadUrl: "https://fsn1-speed.hetzner.com/100MB.bin",
+            uploadUrl: "https://httpbingo.org/upload",
+          },
+          {
+            id: "hetzner-hel1",
+            name: "Hetzner HEL1",
+            pingUrl: "https://hel1-speed.hetzner.com/",
+            downloadUrl: "https://hel1-speed.hetzner.com/100MB.bin",
+            uploadUrl: "https://httpbingo.org/upload",
+          },
+        ],
+      });
+
+      const syncTimer = (elapsedMs) => {
+        ui.timerText.textContent = mmss(Math.max(0, Number(elapsedMs || 0)));
+      };
+
+      const applySpeedtestMetrics = (payload) => {
+        if (Number.isFinite(payload.pingMs)) {
+          cur.ping = Number(payload.pingMs);
+          ui.latencyVal.textContent = String(Math.round(cur.ping));
+          ui.microPingVal.textContent = String(Math.round(cur.ping));
+        }
+        if (Number.isFinite(payload.jitterMs)) {
+          cur.jitter = Number(payload.jitterMs);
+          ui.jitterVal.textContent = String(Math.round(cur.jitter));
+          ui.microJitterVal.textContent = String(Math.round(cur.jitter));
+        }
+        if (Number.isFinite(payload.lossPct)) {
+          cur.loss = Number(payload.lossPct);
+          ui.lossVal.textContent = fmt1(cur.loss);
+          ui.microLossVal.textContent = fmt1(cur.loss);
+        }
+        if (Number.isFinite(payload.downMbps)) {
+          cur.down = Number(payload.downMbps);
+          ui.downVal.textContent = fmt1(cur.down);
+        }
+        if (payload.uploadAvailable === false) {
+          ui.upVal.textContent = "N/A";
+          ui.microUpVal.textContent = "N/A";
+        } else if (Number.isFinite(payload.upMbps)) {
+          cur.up = Number(payload.upMbps);
+          ui.upVal.textContent = fmt1(cur.up);
+          ui.microUpVal.textContent = fmt1(cur.up);
+        }
+      };
+
+      const startRun = () => {
+        if (state !== State.IDLE && state !== State.DONE && state !== State.ABORTED) return;
+        if (!nativeBridge?.available?.()) {
+          ui.statusText.textContent = "NO BRIDGE";
+          showBanner("Native bridge unavailable. Speedtest disabled.", "error");
+          return;
+        }
+        if (!runtime.bridgeState.enabled) {
+          ui.statusText.textContent = "BRIDGE OFF";
+          showBanner("Enable Native Bridge before starting the speedtest.", "warn");
+          return;
+        }
+
+        aborted = false;
+        lockButtons(true);
+
+        runStart = performance.now();
+        setPhase(State.PING);
+
+        cur.display = 0;
+        cur.sweepStart = runStart;
+        cur.needleVel = 0;
+        lastTick = 0;
+        syncTimer(0);
+        setMainReadout(cur.display);
+        setNeedleAngle(needleForMbps(0));
+        setNeedleTarget(needleForMbps(0));
+        ui.upVal.textContent = "0.0";
+        ui.microUpVal.textContent = "0.0";
+        ui.downVal.textContent = "0.0";
+        ui.latencyVal.textContent = "--";
+        ui.jitterVal.textContent = "--";
+        ui.lossVal.textContent = "--";
+        ui.microPingVal.textContent = "--";
+        ui.microJitterVal.textContent = "--";
+        ui.microLossVal.textContent = "--";
+
+        stopSpeedtestLoop();
+        ensureSpeedtestLoop();
+        nativeBridge?.invoke?.("speedtestStart", JSON.stringify(buildSpeedtestConfig()));
+        showBanner("Speedtest started.", "success");
+      };
+
+      const abortRun = (notifyNative = true) => {
+        if (state === State.IDLE || state === State.DONE || state === State.ABORTED) return;
+        aborted = true;
+        setPhase(State.ABORTED);
+        lockButtons(false);
+
+        ui.unitLabel.textContent = "Mbps";
+        ui.statusText.textContent = "ABORTED";
+        setNeedleTarget(needleForMbps(0));
+        gaugeRenderer.render(performance.now(), cur.needleDeg, cur.display);
+
+        stopSpeedtestLoop();
+        if (notifyNative) nativeBridge?.invoke?.("speedtestAbort");
+        showBanner("Speedtest aborted.", "warn");
+      };
+
+      const finishRun = () => {
+        stopSpeedtestLoop();
+        setPhase(State.DONE);
+        lockButtons(false);
+        aborted = false;
+        setThroughputReadout(cur.down);
+        setNeedleAngle(needleForMbps(cur.down));
+        setNeedleTarget(needleForMbps(cur.down));
+        updateGaugeColorProfile(cur.down);
+        gaugeRenderer.render(performance.now(), cur.needleDeg, cur.display);
+        showBanner("Speedtest complete.", "success");
+      };
+
+      let lastTick = 0;
+      const tick = (now) => {
+        if (aborted || !speedtestRendererActive) {
+          stopSpeedtestLoop();
+          return;
+        }
+
+        const dt = lastTick ? (now - lastTick) : 16.7;
+        lastTick = now;
+
+        const scanIntensity =
+          (state === State.PING) ? 0.35 :
+          (state === State.DOWNLOAD) ? 0.85 :
+          (state === State.UPLOAD) ? 0.75 :
+          0.25;
+
+        updateWaveform(now, scanIntensity);
+
+        advanceNeedle(dt);
+        gaugeRenderer.render(now, cur.needleDeg, cur.display);
+        updateGaugeColorProfile(state === State.PING ? cur.display * 25 : cur.display);
+        raf = speedtestRendererActive ? requestAnimationFrame(tick) : 0;
+      };
+
+      ui.btnStart.addEventListener("click", startRun);
+      ui.btnAbort.addEventListener("click", abortRun);
+      ui.btnReset.addEventListener("click", () => {
+        stopSpeedtestLoop();
+        nativeBridge?.invoke?.("speedtestReset");
+        resetUI();
+        showBanner("Speedtest reset.", "success");
+      });
+
+      $("btnSettings").addEventListener("click", () => {
+        setActive("config");
+        showBanner("Opened Shield settings.", "success");
+      });
+
+      // Bottom navigation binding and screen toggling
+      const nav = {
+        engine: document.getElementById("navEngine"),
+        list: document.getElementById("navList"),
+        map: document.getElementById("navMap"),
+        config: document.getElementById("navConfig"),
+      };
+      const screens = {
+        engine: document.getElementById("engineScreen"),
+        list: document.getElementById("wifiListScreen"),
+        map: document.getElementById("wifiMapScreen"),
+        config: document.getElementById("configScreen"),
+      };
+      const replacementFrames = {
+        speed: document.getElementById("speedFrame"),
+        networks: document.getElementById("networksFrame"),
+        nodes: document.getElementById("nodesFrame"),
+      };
+      const postToReplacementFrame = (frameKey, type, payload = {}) => {
+        const frame = replacementFrames[frameKey];
+        if (!frame || !frame.contentWindow) return;
+        frame.contentWindow.postMessage({ source: "netninja-host", type, payload }, "*");
+      };
+      const detachParallax = [
+        motion.attachParallax(document.getElementById("engineScreen")),
+        motion.attachParallax(document.getElementById("wifiMapScreen")),
+        motion.attachParallax(document.getElementById("wifiListScreen")),
+      ];
+      // Grab the decorative vertical bars so they can be hidden when switching screens
+      const bars = {
+        left: document.getElementById("barsLeft"),
+        right: document.getElementById("barsRight"),
+      };
+
+      let themeModalRestoreFocus = null;
+      const THEME_DEBUG_ENABLED =
+        new URLSearchParams(window.location.search).get("debugThemes") === "1" ||
+        localStorage.getItem("netninja.debug.themes") === "1";
+
+      function setThemeDebugLine(message) {
+        if (!nativeUi.themeDebugLine) return;
+        nativeUi.themeDebugLine.dataset.debug = THEME_DEBUG_ENABLED ? "on" : "off";
+        nativeUi.themeDebugLine.textContent = THEME_DEBUG_ENABLED ? message : "";
+      }
+
+      function getThemeSystemStatus() {
+        const registry = window.HoloThemeManager?.getThemeRegistry?.() || window.HoloThemeRegistry || window.HoloThemes || null;
+        const themes = registry && typeof registry.getAllThemes === "function" ? registry.getAllThemes() : [];
+        const activeThemeId = window.HoloThemeManager?.getThemeIdForScreen?.("speedtest")
+          || document.documentElement.dataset.themeId
+          || "default";
+        return {
+          registryReady: !!window.__NETNINJA_THEME_REGISTRY_READY,
+          managerReady: !!window.HoloThemeManager && !!window.__NETNINJA_THEME_MANAGER_READY,
+          bootstrapped: !!window.__NETNINJA_THEME_BOOTSTRAPPED,
+          themeCount: Array.isArray(themes) ? themes.length : 0,
+          activeThemeId,
+        };
+      }
+
+      function syncThemeButtonState() {
+        if (!ui.btnTheme) return;
+        const status = getThemeSystemStatus();
+        ui.btnTheme.hidden = false;
+        ui.btnTheme.style.display = "inline-flex";
+        ui.btnTheme.style.visibility = "visible";
+        ui.btnTheme.style.pointerEvents = "auto";
+        ui.btnTheme.title = status.themeCount > 0
+          ? `Theme: ${status.activeThemeId}`
+          : "No themes loaded";
+        setThemeDebugLine(`registry ${status.registryReady ? "ready" : "missing"} / manager ${status.managerReady ? "ready" : "missing"} / themes ${status.themeCount} / active ${status.activeThemeId}`);
+      }
+
+      function currentThemeIdForSpeedtest() {
+        if (!window.HoloThemeManager) return null;
+        return window.HoloThemeManager.getThemeIdForScreen("speedtest");
+      }
+
+      function buildThemeOption(theme, activeThemeId) {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "theme-option";
+        option.dataset.themeId = theme.id;
+        option.setAttribute("role", "option");
+        option.setAttribute("aria-selected", String(theme.id === activeThemeId));
+        if (theme.id === activeThemeId) option.classList.add("is-active");
+
+        const swatchPrimary = theme.vars?.["--accent-0"] || "#00d4ff";
+        const swatchSecondary = theme.vars?.["--accent-1"] || "#a855f7";
+        const swatchGood = theme.vars?.["--good-0"] || "#b7ff2a";
+
+        option.innerHTML = `
+          <span class="theme-option__label">${theme.label}</span>
+          <span class="theme-option__swatches" aria-hidden="true">
+            <span class="theme-option__swatch" style="background:${swatchPrimary};"></span>
+            <span class="theme-option__swatch" style="background:${swatchSecondary};"></span>
+            <span class="theme-option__swatch" style="background:${swatchGood};"></span>
+          </span>
+        `;
+
+        option.addEventListener("click", () => {
+          if (!window.HoloThemeManager) return;
+          const selected = window.HoloThemeManager.setThemeIdForScreen("speedtest", theme.id);
+          if (!selected) return;
+          if (runtime.config) applyVisualConfig(runtime.config);
+          updateGaugeColorProfile(cur.display);
+          gaugeRenderer.render(performance.now(), cur.needleDeg, cur.display);
+          renderThemeList();
+          closeThemeModal();
+        });
+        return option;
+      }
+
+      function renderThemeList() {
+        if (!nativeUi.themeList) return;
+        const registry = window.HoloThemeManager?.getThemeRegistry?.() || window.HoloThemeRegistry || window.HoloThemes;
+        syncThemeButtonState();
+        if (!registry || typeof registry.getAllThemes !== "function") {
+          nativeUi.themeList.innerHTML = `<div class="theme-modal__empty">No themes loaded.</div>`;
+          setThemeDebugLine("theme scripts missing / 0 themes");
+          return;
+        }
+        const themes = registry.getAllThemes();
+        if (!Array.isArray(themes) || themes.length === 0) {
+          nativeUi.themeList.innerHTML = `<div class="theme-modal__empty">No themes loaded.</div>`;
+          setThemeDebugLine("theme registry empty / 0 themes");
+          return;
+        }
+        const activeThemeId = currentThemeIdForSpeedtest();
+        nativeUi.themeList.innerHTML = "";
+        themes.forEach((theme) => {
+          nativeUi.themeList.appendChild(buildThemeOption(theme, activeThemeId));
+        });
+        setThemeDebugLine(`themes loaded / ${themes.length} found / active ${activeThemeId}`);
+      }
+
+      function openThemeModal() {
+        if (!nativeUi.speedtestThemeModal) return;
+        themeModalRestoreFocus = document.activeElement;
+        syncThemeButtonState();
+        renderThemeList();
+        nativeUi.speedtestThemeModal.classList.remove("hidden");
+        nativeUi.speedtestThemeModal.classList.add("is-open");
+        ui.btnTheme?.setAttribute("aria-expanded", "true");
+        nativeUi.speedtestThemeModal.focus();
+      }
+
+      function closeThemeModal() {
+        if (!nativeUi.speedtestThemeModal) return;
+        nativeUi.speedtestThemeModal.classList.remove("is-open");
+        nativeUi.speedtestThemeModal.classList.add("hidden");
+        ui.btnTheme?.setAttribute("aria-expanded", "false");
+        if (themeModalRestoreFocus && typeof themeModalRestoreFocus.focus === "function") {
+          themeModalRestoreFocus.focus();
+        }
+      }
+      if (window.HoloThemeManager) {
+        setThemeDebugLine(`theme manager ready / active ${window.HoloThemeManager.getThemeIdForScreen("speedtest") || "default"}`);
+      } else {
+        setThemeDebugLine("theme manager missing");
+      }
+      syncThemeButtonState();
+      const RENDER_DEBUG_ENABLED =
+        new URLSearchParams(window.location.search).get("debugRenderers") === "1" ||
+        localStorage.getItem("netninja.debug.renderers") === "1";
+
+      function logRendererLifecycle(action, screenId) {
+        if (!RENDER_DEBUG_ENABLED || !screenId) return;
+        console.debug(`[renderer] ${action}: ${screenId}`);
+      }
+
+      function screenIdForTab(tab) {
+        if (tab === "engine") return "speedtest";
+        if (tab === "map") return "map";
+        return tab;
+      }
+
+      function isScreenVisible(screen) {
+        if (!screen) return false;
+        if (screen.hidden || screen.classList.contains("hidden")) return false;
+        const style = window.getComputedStyle(screen);
+        return style.display !== "none" && style.visibility !== "hidden";
+      }
+
+      function visibleScreenEntryFromDom() {
+        for (const [tab, screen] of Object.entries(screens)) {
+          if (isScreenVisible(screen)) {
+            return { tab, screenId: screenIdForTab(tab) };
+          }
+        }
+        return { tab: "engine", screenId: "speedtest" };
+      }
+
+      function initialTabFromDom() {
+        return visibleScreenEntryFromDom().tab;
+      }
+
+      function activeScreenIdFromDom() {
+        return visibleScreenEntryFromDom().screenId;
+      }
+
+      function syncActiveRendererAfterLayout(screenId = activeScreenIdFromDom(), options = {}) {
+        const force = !!options.force;
+        const resizeFirst = !!options.resizeFirst;
+        if (options.applyTheme !== false && window.HoloThemeManager) {
+          window.HoloThemeManager.applyThemeForScreen(screenId);
+          window.__NETNINJA_THEME_BOOTSTRAPPED = true;
+        }
+        if (runtime.config) {
+          applyVisualConfig(runtime.config);
+        }
+        const supportsRenderer = rendererRegistry?.has?.(screenId);
+        if (!supportsRenderer) {
+          rendererRegistry?.stopAll?.();
+          return;
+        }
+        if (resizeFirst) {
+          rendererRegistry?.resize?.(screenId);
+        }
+        logRendererLifecycle(force ? "force-start" : "start", screenId);
+        rendererRegistry?.start?.(screenId, {
+          force,
+          skipResize: resizeFirst,
+        });
+        if (!resizeFirst) {
+          rendererRegistry?.resizeActive?.(screenId);
+        }
+      }
+
+      function scheduleInitialRendererStartup() {
+        const run = () => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              syncActiveRendererAfterLayout(activeScreenIdFromDom(), {
+                applyTheme: true,
+                force: true,
+                resizeFirst: true,
+              });
+            });
+          });
+        };
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", run, { once: true });
+        } else {
+          run();
+        }
+      }
+
+      function setActive(tab, options = {}) {
+        const applyThemeOverride = options.applyTheme !== false;
+        const deferRendererStart = !!options.deferRendererStart;
+        const nextScreenId = screenIdForTab(tab);
+        const prevScreenId = rendererRegistry?.getActiveScreenId?.() || null;
+        const screenChanged = prevScreenId !== nextScreenId;
+        const leavingLanScreens = (!screens.list?.classList.contains("hidden") || !screens.map?.classList.contains("hidden")) && tab !== "list" && tab !== "map";
+
+        if (screenChanged && prevScreenId === "speedtest" && nextScreenId !== "speedtest" && isSpeedtestRunning()) {
+          abortRun(true);
+        }
+        if (leavingLanScreens && runtime.mapScanInProgress) {
+          nativeBridge?.invoke?.("lanScanStop");
+          runtime.mapScanInProgress = false;
+        }
+
+        // Hide all screens
+        Object.values(screens).forEach((s) => {
+          if (s) s.classList.add("hidden");
+        });
+        // Show selected screen if exists
+        if (screens[tab]) {
+          screens[tab].classList.remove("hidden");
+        }
+        // Show or hide decorative bars based on active screen
+        if (bars.left) bars.left.classList.toggle("hidden", tab !== "engine");
+        if (bars.right) bars.right.classList.toggle("hidden", tab !== "engine");
+        // Update nav colors
+        Object.keys(nav).forEach((k) => {
+          nav[k]?.classList.remove("is-active");
+        });
+        if (nav[tab]) {
+          nav[tab].classList.add("is-active");
+        }
+
+        if (screenChanged && prevScreenId) {
+          logRendererLifecycle("stop", prevScreenId);
+          rendererRegistry?.stop?.(prevScreenId);
+        }
+        if (applyThemeOverride && window.HoloThemeManager) {
+          window.HoloThemeManager.applyThemeForScreen(nextScreenId);
+        }
+        if (runtime.config) {
+          applyVisualConfig(runtime.config);
+        }
+        if (tab !== "engine") closeThemeModal();
+        if (tab === "map") renderMapFromScan();
+        if (!deferRendererStart) {
+          requestAnimationFrame(() => {
+            syncActiveRendererAfterLayout(nextScreenId, {
+              force: screenChanged || !prevScreenId,
+            });
+          });
+        }
+      }
+      // Event bindings
+      nav.engine?.addEventListener("click", () => {
+        setActive("engine");
+        ui.statusText.textContent = "CORE";
+      });
+      nav.list?.addEventListener("click", () => {
+        setActive("list");
+        ui.statusText.textContent = "GRAPH";
+        ui.scanJitter.style.opacity = "1";
+        ui.scanJitter.style.animation = "jitter 0.35s linear 1";
+        setTimeout(() => {
+          ui.scanJitter.style.opacity = "0";
+          ui.statusText.textContent = (state === State.IDLE ? "READY" : ui.statusText.textContent);
+        }, 350);
+        onListTabSelected();
+      });
+      nav.map?.addEventListener("click", () => {
+        setActive("map");
+        ui.statusText.textContent = "NODES";
+        ui.scanJitter.style.opacity = "1";
+        ui.scanJitter.style.animation = "jitter 0.35s linear 1";
+        setTimeout(() => {
+          ui.scanJitter.style.opacity = "0";
+          ui.statusText.textContent = (state === State.IDLE ? "READY" : ui.statusText.textContent);
+        }, 350);
+        renderMapFromScan();
+      });
+      nav.config?.addEventListener("click", () => {
+        setActive("config");
+        ui.statusText.textContent = "SHIELD";
+        ui.scanJitter.style.opacity = "1";
+        ui.scanJitter.style.animation = "jitter 0.35s linear 1";
+        setTimeout(() => {
+          ui.scanJitter.style.opacity = "0";
+          ui.statusText.textContent = (state === State.IDLE ? "READY" : ui.statusText.textContent);
+        }, 350);
+      });
+
+      window.addEventListener("message", (event) => {
+        const data = event.data || {};
+        if (data.source !== "netninja-screen") return;
+        const payload = data.payload || {};
+        if (data.type === "nn_speedtest_start") {
+          ui.btnStart?.click();
+          return;
+        }
+        if (data.type === "nn_speedtest_abort") {
+          ui.btnAbort?.click();
+          return;
+        }
+        if (data.type === "nn_speedtest_reset") {
+          ui.btnReset?.click();
+          return;
+        }
+        if (data.type === "nn_nav_tab") {
+          const tab = ["engine", "list", "map", "config"].includes(payload.tab) ? payload.tab : "engine";
+          setActive(tab);
+        }
+      });
+
+      const NATIVE_EVENT = "netninja:native";
+      const cfgKey = "nn_cfg";
+      const nativeBridge = window.NetNinjaNativeBridge || null;
+      const runtime = {
+        bridgeState: {
+          available: !!nativeBridge?.available?.(),
+          enabled: false,
+          canScan: false,
+          scanPermissionGranted: false,
+          locationServicesEnabled: false,
+          missingPermissions: [],
+        },
+        config: null,
+        lastDeviceInfo: null,
+        lastScanResults: [],
+        lastScanSource: "none",
+        lastScanCapturedAt: 0,
+        lastGatewayIp: "",
+        lastLocalIp: "",
+        lastSubnet: "",
+        mapFilterText: "",
+        mapOverdriveEnabled: false,
+        mapCloakEnabled: false,
+        mapScanInProgress: false,
+        selectedLanDevice: null,
+        alertCardVisible: true,
+      };
+      const defaultConfig = () => ({
+        autoScan: false,
+        holoFX: true,
+        alerts: true,
+        demoMode: false,
+        bridgeEnabled: true,
+        neonIntensity: 70,
+        scanSpeed: 50,
+        accentMode: "blue",
+        perfMode: "high",
+      });
+      const cfgCtrls = {
+        autoScan: document.getElementById("cfgAutoScan"),
+        holoFX: document.getElementById("cfgHoloFX"),
+        alerts: document.getElementById("cfgAlerts"),
+        demoMode: document.getElementById("cfgDemoMode"),
+        bridgeEnabled: document.getElementById("cfgBridgeEnabled"),
+        neonIntensity: document.getElementById("cfgNeonIntensity"),
+        scanSpeed: document.getElementById("cfgScanSpeed"),
+        accentMode: document.getElementById("cfgAccentMode"),
+        perfMode: document.getElementById("cfgPerfMode"),
+      };
+      const cfgSaveBtn = document.getElementById("cfgSaveBtn");
+      const cfgResetBtn = document.getElementById("cfgResetBtn");
+      const cfgStatusMsg = document.getElementById("cfgStatusMsg");
+      let cfgStatusTimer = 0;
+      let bannerTimer = 0;
+
+      const escapeHtml = (value) => String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll("\"", "&quot;")
+        .replaceAll("'", "&#39;");
+
+      const deviceAccent = (device) => {
+        if (device?.isGateway) return { color: getVar("--good-0", "#b7ff2a"), glow: themeRgba("--good-0", 0.4, "#b7ff2a") };
+        if (device?.isLocalDevice) return { color: getVar("--accent-1", "#a855f7"), glow: themeRgba("--accent-1", 0.4, "#a855f7") };
+        const rtt = Number(device?.rttMs ?? 999);
+        if (device?.reachable === false) return { color: getVar("--warn-0", "#ff8a47"), glow: themeRgba("--warn-0", 0.4, "#ff8a47") };
+        if (rtt <= 10) return { color: getVar("--good-0", "#b7ff2a"), glow: themeRgba("--good-0", 0.4, "#b7ff2a") };
+        if (rtt <= 45) return { color: getVar("--accent-0", "#00d4ff"), glow: themeRgba("--accent-0", 0.4, "#00d4ff") };
+        if (rtt <= 120) return { color: getVar("--warn-0", "#ff8a47"), glow: themeRgba("--warn-0", 0.4, "#ff8a47") };
+        return { color: getVar("--accent-1", "#a855f7"), glow: themeRgba("--accent-1", 0.4, "#a855f7") };
+      };
+
+      const formatLatency = (value) => Number.isFinite(Number(value)) ? `${fmt1(Number(value))} ms` : "N/A";
+      const formatVendor = (device) => String(device?.vendor || "Unknown Vendor");
+      const formatHostname = (device, fallback = "Unknown Device") => String(device?.hostname || "").trim() || fallback;
+      const formatMac = (device) => String(device?.macAddress || "N/A");
+      const formatType = (device) => String(device?.deviceType || "device").replaceAll("-", " ").toUpperCase();
+      function openDeviceDetail(device) {
+        if (!device || !nativeUi.deviceDetailModal) return;
+        runtime.selectedLanDevice = device;
+        nativeUi.deviceDetailSummary.textContent = `${formatHostname(device)} // ${device.ipAddress || "Unknown IP"}`;
+        nativeUi.deviceDetailJson.textContent = JSON.stringify(device, null, 2);
+        nativeUi.deviceDetailModal.classList.remove("hidden");
+        nativeUi.deviceDetailModal.classList.add("is-open");
+        nativeUi.deviceDetailModal.focus();
+      }
+
+      function closeDeviceDetail() {
+        if (!nativeUi.deviceDetailModal) return;
+        nativeUi.deviceDetailModal.classList.remove("is-open");
+        nativeUi.deviceDetailModal.classList.add("hidden");
+      }
+
+      function getCurrentConfig() {
+        return {
+          autoScan: cfgCtrls.autoScan.checked,
+          holoFX: cfgCtrls.holoFX.checked,
+          alerts: cfgCtrls.alerts.checked,
+          demoMode: false,
+          bridgeEnabled: cfgCtrls.bridgeEnabled.checked,
+          neonIntensity: Number(cfgCtrls.neonIntensity.value),
+          scanSpeed: Number(cfgCtrls.scanSpeed.value),
+          accentMode: cfgCtrls.accentMode.value,
+          perfMode: cfgCtrls.perfMode.value,
+        };
+      }
+
+      function setControlDisabled(control, disabled, reason) {
+        if (!control) return;
+        control.disabled = !!disabled;
+        control.setAttribute("aria-disabled", disabled ? "true" : "false");
+        if (disabled && reason) {
+          control.dataset.disabledReason = reason;
+          control.title = reason;
+        } else {
+          delete control.dataset.disabledReason;
+          control.removeAttribute("title");
+        }
+      }
+
+      function applyAccentMode(mode) {
+        const palette = {
+          blue: { accent0: "#00d4ff", accent1: "#a855f7", ring0: "#00f2ff", ring1: "#a855f7" },
+          violet: { accent0: "#8f7aff", accent1: "#c084fc", ring0: "#a59bff", ring1: "#c084fc" },
+          pink: { accent0: "#ff3ab5", accent1: "#ff7ad9", ring0: "#ff6fc7", ring1: "#ff7ad9" },
+          green: { accent0: "#43f9a4", accent1: "#00d4ff", ring0: "#75ffc0", ring1: "#00d4ff" },
+        }[mode] || { accent0: "#00d4ff", accent1: "#a855f7", ring0: "#00f2ff", ring1: "#a855f7" };
+
+        document.documentElement.style.setProperty("--accent-0", palette.accent0);
+        document.documentElement.style.setProperty("--accent-1", palette.accent1);
+        document.documentElement.style.setProperty("--ring-0", palette.ring0);
+        document.documentElement.style.setProperty("--ring-1", palette.ring1);
+        document.documentElement.style.setProperty("--beam-0", palette.ring0);
+      }
+
+      function applyVisualConfig(config) {
+        const glowStrength = Math.max(0.4, Number(config.neonIntensity || 0) / 70);
+        const bloomStrength = Math.max(0.35, Number(config.neonIntensity || 0) / 85);
+        document.documentElement.style.setProperty("--effect-glow-strength", glowStrength.toFixed(2));
+        document.documentElement.style.setProperty("--effect-bloom-strength", bloomStrength.toFixed(2));
+        document.querySelector(".vhs-overlay")?.style.setProperty("display", config.holoFX ? "block" : "none");
+        document.getElementById("holoParticleField")?.style.setProperty("display", config.holoFX ? "block" : "none");
+        if (nativeUi.mapAlertCard) {
+          nativeUi.mapAlertCard.classList.toggle("hidden", config.alerts === false);
+        }
+        runtime.alertCardVisible = config.alerts !== false;
+        applyAccentMode(config.accentMode);
+      }
+
+      function applyConfigPreview(config) {
+        runtime.config = { ...config };
+        applyPerfMode(config.perfMode);
+        applyVisualConfig(config);
+        updateGaugeColorProfile(cur.display);
+        gaugeRenderer.render(performance.now(), cur.needleDeg, cur.display);
+        renderMapFromScan();
+      }
+
+      function setConfigControls(data) {
+        cfgCtrls.autoScan.checked = !!data.autoScan;
+        cfgCtrls.holoFX.checked = !!data.holoFX;
+        cfgCtrls.alerts.checked = !!data.alerts;
+        cfgCtrls.demoMode.checked = false;
+        setControlDisabled(cfgCtrls.demoMode, true, "Fallback mode is not bundled in this build.");
+        cfgCtrls.bridgeEnabled.checked = !!data.bridgeEnabled;
+        cfgCtrls.neonIntensity.value = Number(data.neonIntensity);
+        cfgCtrls.scanSpeed.value = Number(data.scanSpeed);
+        cfgCtrls.accentMode.value = data.accentMode;
+        cfgCtrls.perfMode.value = data.perfMode;
+      }
+
+      function showCfgStatus(message) {
+        cfgStatusMsg.textContent = message;
+        cfgStatusMsg.classList.remove("hidden");
+        clearTimeout(cfgStatusTimer);
+        cfgStatusTimer = setTimeout(() => cfgStatusMsg.classList.add("hidden"), 2400);
+      }
+
+      function showBanner(message, level = "info", options = {}) {
+        if (!nativeUi.appBanner || !message) return;
+        const alertsEnabled = runtime.config?.alerts !== false;
+        const severity = String(level || "info");
+        if (!alertsEnabled && !["error", "warn"].includes(severity)) return;
+        nativeUi.appBanner.dataset.level = severity;
+        nativeUi.appBanner.textContent = String(message);
+        nativeUi.appBanner.classList.add("is-visible");
+        clearTimeout(bannerTimer);
+        if (options.sticky) return;
+        bannerTimer = setTimeout(() => {
+          nativeUi.appBanner.classList.remove("is-visible");
+        }, options.durationMs || 2400);
+      }
+
+      function hideBanner() {
+        clearTimeout(bannerTimer);
+        nativeUi.appBanner?.classList.remove("is-visible");
+      }
+
+      nativeBridge?.setFeedbackHandler?.((message, level) => {
+        showBanner(message, level);
+      });
+
+      function updateBridgeUi() {
+        const bridge = runtime.bridgeState;
+        const missingPermissions = Array.isArray(bridge.missingPermissions) ? bridge.missingPermissions : [];
+        const bridgeDisabledReason = !bridge.available
+          ? "Native bridge is unavailable in this shell."
+          : !bridge.enabled
+            ? "Enable Native Bridge in Shield settings."
+            : !bridge.canScan
+              ? "Connect to an IPv4 LAN before scanning."
+              : "";
+
+        nativeUi.wifiBridgeState.textContent = !bridge.available ? "Unavailable" : bridge.enabled ? "Armed" : "Disabled";
+        nativeUi.wifiPermissionState.textContent = !bridge.available
+          ? "N/A"
+          : missingPermissions.length > 0
+            ? `Missing: ${missingPermissions.join(", ")}`
+            : bridge.locationServicesEnabled
+              ? "Granted"
+              : "Location Off";
+        nativeUi.wifiScanState.textContent = !bridge.canScan ? "No IPv4 Link" : bridge.enabled ? "Ready" : "Standby";
+        $("speedEngineMode").textContent = !bridge.available
+          ? "Native Engine Unavailable"
+          : bridge.enabled
+            ? "Native Engine Ready"
+            : "Bridge Disabled";
+        nativeUi.cfgBridgeSummary.textContent = !bridge.available
+          ? "Native bridge unavailable in this shell."
+          : bridge.enabled
+            ? (bridge.canScan ? "Bridge enabled. LAN discovery ready." : "Bridge enabled. Connect to a local network to scan.")
+            : "Bridge loaded but disabled by config.";
+
+        setControlDisabled(ui.btnStart, !bridge.available || !bridge.enabled, bridgeDisabledReason || "Speedtest ready.");
+        setControlDisabled(nativeUi.wifiScanBtn, !!bridgeDisabledReason, bridgeDisabledReason || "LAN scanner ready.");
+        setControlDisabled(nativeUi.wifiExportBtn, !bridge.available || !bridge.enabled, !bridge.available || !bridge.enabled ? "Enable Native Bridge before exporting diagnostics." : "");
+        setControlDisabled(nativeUi.cfgRefreshDeviceBtn, !bridge.available || !bridge.enabled, !bridge.available || !bridge.enabled ? "Enable Native Bridge before requesting device info." : "");
+        setControlDisabled(nativeUi.cfgExportDiagBtn, !bridge.available || !bridge.enabled, !bridge.available || !bridge.enabled ? "Enable Native Bridge before exporting diagnostics." : "");
+        setControlDisabled(nativeUi.mapRunScanBtn, !!bridgeDisabledReason, bridgeDisabledReason || "LAN scanner ready.");
+      }
+
+      function updateDeviceUi() {
+        const info = runtime.lastDeviceInfo;
+        nativeUi.cfgDeviceSummary.textContent = !info
+          ? "No device snapshot yet."
+          : `${info.manufacturer} ${info.model} / Android ${info.release} / SDK ${info.sdkInt}`;
+      }
+
+      function updateWifiListState(networks, source, meta) {
+        const lowerMeta = String(meta || "").toLowerCase();
+        let badge = "STANDBY";
+        let message = "No LAN devices loaded. Tap Scan for local discovery.";
+
+        if (lowerMeta.includes("started") || lowerMeta.includes("progress") || lowerMeta.includes("scanning")) {
+          badge = "SCANNING";
+          message = "Subnet sweep in progress. Streaming live hosts.";
+        }
+        if (lowerMeta.includes("stopped")) {
+          badge = "STOP";
+          message = "LAN discovery stopped.";
+        }
+        if (lowerMeta.includes("error") || lowerMeta.includes("failed")) {
+          badge = "ERROR";
+          message = "Discovery interrupted. Retry when the local link is stable.";
+        }
+        if (networks.length > 0) {
+          badge = source === "cached" ? "CACHED" : "LIVE";
+          message = `${networks.length} LAN devices synchronized in matrix.`;
+        }
+
+        if (nativeUi.wifiStateBadge) nativeUi.wifiStateBadge.textContent = badge;
+        if (nativeUi.wifiStateMessage) nativeUi.wifiStateMessage.textContent = message;
+        if (nativeUi.wifiIntelStatus) {
+          nativeUi.wifiIntelStatus.textContent = badge.slice(0, 5);
+        }
+      }
+
+      function updateWifiCenterIntel(networks) {
+        const list = Array.isArray(networks) ? networks : [];
+        if (nativeUi.wifiIntelCount) {
+          nativeUi.wifiIntelCount.textContent = String(list.length);
+        }
+        if (nativeUi.wifiIntelSignal) nativeUi.wifiIntelSignal.textContent = runtime.lastGatewayIp || "--";
+        if (nativeUi.wifiIntelBand) nativeUi.wifiIntelBand.textContent = runtime.lastLocalIp || "--";
+      }
+
+      function bindDeviceListClicks() {
+        nativeUi.wifiDeviceList.querySelectorAll("[data-device-ip]").forEach((node) => {
+          node.addEventListener("click", () => {
+            const ip = node.getAttribute("data-device-ip");
+            const device = runtime.lastScanResults.find((item) => item.ipAddress === ip);
+            if (device) openDeviceDetail(device);
+          });
+        });
+        nativeUi.mapNodesList.querySelectorAll("[data-device-ip]").forEach((node) => {
+          node.addEventListener("click", () => {
+            const ip = node.getAttribute("data-device-ip");
+            const device = runtime.lastScanResults.find((item) => item.ipAddress === ip);
+            if (device) openDeviceDetail(device);
+          });
+        });
+      }
+
+      function renderWifiNetworks(networks, source, meta) {
+        runtime.lastScanResults = [...networks].sort((a, b) => {
+          if (!!a.isGateway !== !!b.isGateway) return a.isGateway ? -1 : 1;
+          if (!!a.isLocalDevice !== !!b.isLocalDevice) return a.isLocalDevice ? -1 : 1;
+          return String(a.ipAddress || "").localeCompare(String(b.ipAddress || ""));
+        });
+        runtime.lastScanSource = source;
+        nativeUi.wifiScanMeta.textContent = meta;
+        updateWifiListState(runtime.lastScanResults, source, meta);
+        updateWifiCenterIntel(runtime.lastScanResults);
+        nativeUi.wifiEmptyState.classList.toggle("hidden", runtime.lastScanResults.length > 0);
+        nativeUi.wifiDeviceList.innerHTML = runtime.lastScanResults.map((network, index) => {
+          const accent = deviceAccent(network);
+          const latencyValue = Number(network.rttMs ?? 0);
+          const meterPct = Number.isFinite(latencyValue) && latencyValue > 0
+            ? Math.max(10, Math.min(100, 100 - Math.round(Math.min(latencyValue, 180) / 1.8)))
+            : (network.reachable === false ? 12 : 55);
+          const badge = network.isGateway ? "GATEWAY" : network.isLocalDevice ? "LOCAL" : source === "cached" ? "CACHED" : "LIVE";
+          const active = network.reachable !== false;
+          const title = escapeHtml(formatHostname(network, `Device_${index + 1}`));
+          const ip = escapeHtml(network.ipAddress || "Unknown IP");
+          const mac = escapeHtml(formatMac(network));
+          const vendor = escapeHtml(formatVendor(network));
+          const latency = escapeHtml(formatLatency(network.rttMs));
+          const method = escapeHtml(String(network.method || "unknown").toUpperCase());
+          const type = escapeHtml(formatType(network));
+          return `
+            <div class="shard-card p-4 group holo-interactive cursor-pointer" data-device-ip="${escapeHtml(network.ipAddress)}" style="--edge-color:${accent.color}; --glow-color:${accent.glow};">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 flex items-center justify-center rounded-xl device-rim-icon" data-depth="0.7">
+                  <span class="material-symbols-outlined" style="color:${accent.color};">${network.isGateway ? "router" : network.isLocalDevice ? "smartphone" : "lan"}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                      <h3 class="text-base sm:text-lg uppercase tracking-[0.12em] truncate font-black holo-title-strong" style="font-family:'Orbitron',sans-serif;">${title}</h3>
+                      <p class="text-[10px] uppercase tracking-[0.19em] mt-1 holo-text-good">IP: ${ip} // MAC: ${mac}</p>
+                      <p class="text-[10px] uppercase tracking-[0.17em] mt-1 holo-text-subtle">VENDOR: ${vendor} // TYPE: ${type}</p>
+                    </div>
+                    <div class="shrink-0 text-right">
+                      <span class="text-[9px] font-black tracking-[0.3em] px-2 py-1 rounded-full border holo-chip" style="font-family:'Orbitron',sans-serif;color:${accent.color}; border-color:${accent.color};">${badge}</span>
+                      <div class="mt-2 w-20">
+                        <div class="text-[8px] tracking-[0.28em] uppercase mb-1 holo-text-good" style="font-family:'Orbitron',sans-serif;">RTT</div>
+                        <div class="holo-meter-track"><div class="holo-meter-fill" style="width:${meterPct}%; --edge-color:${accent.color};"></div></div>
+                        <div class="text-[9px] mt-1 font-mono" style="color:${accent.color};">${latency}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mt-3 flex items-center justify-between gap-3">
+                    <div class="relative h-2.5 w-full liquid-bar-container">
+                      <div class="liquid-bar-fill" style="width:${meterPct}%; --bar-start:${accent.color}; --bar-mid:${accent.color}; --bar-end:#ffffff;"></div>
+                    </div>
+                    <div class="flex items-center gap-2 whitespace-nowrap">
+                      ${active ? '<span class="signal-pulse" aria-label="active-device"></span>' : '<span class="size-2 rounded-full" style="background:color-mix(in srgb, var(--accent-0) 30%, transparent);"></span>'}
+                      <span class="text-[10px] font-bold tracking-[0.16em]" style="color:${accent.color};">${method}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join("");
+        renderMapFromScan();
+        bindDeviceListClicks();
+      }
+
+      function formatScanTime(epochMs) {
+        if (!epochMs) return "Never";
+        try {
+          return new Date(epochMs).toLocaleTimeString();
+        } catch {
+          return "Unknown";
+        }
+      }
+
+      function mapPositionFor(index, total) {
+        const safeTotal = Math.max(1, total);
+        const angle = (Math.PI * 2 * index) / safeTotal;
+        const ring = 130 + ((index % 6) * 26);
+        return {
+          angle,
+          ring,
+          depthSeed: ((index * 37) % 100) / 100,
+        };
+      }
+
+      function filteredMapNetworks() {
+        const query = runtime.mapFilterText.trim().toLowerCase();
+        if (!query) return runtime.lastScanResults;
+        return runtime.lastScanResults.filter((network) => {
+          const hostname = String(network.hostname || "").toLowerCase();
+          const ip = String(network.ipAddress || "").toLowerCase();
+          const mac = String(network.macAddress || "").toLowerCase();
+          const vendor = String(network.vendor || "").toLowerCase();
+          return hostname.includes(query) || ip.includes(query) || mac.includes(query) || vendor.includes(query);
+        });
+      }
+
+      function updateMapStatus(networks) {
+        const live = runtime.lastScanSource !== "none";
+        const scanLabel = runtime.mapScanInProgress
+          ? "SCANNING LAN TOPOLOGY"
+          : live
+            ? `${runtime.lastScanSource.toUpperCase()} DEVICE SNAPSHOT`
+            : "Awaiting LAN Scan";
+        nativeUi.mapActiveNodes.textContent = `${networks.length}`;
+        nativeUi.mapValue.textContent = `${networks.length}`;
+        if (nativeUi.mapGatewayLabel) {
+          nativeUi.mapGatewayLabel.textContent = runtime.lastGatewayIp ? String(runtime.lastGatewayIp).slice(-12) : "Gateway";
+        }
+        nativeUi.mapLastSync.textContent = formatScanTime(runtime.lastScanCapturedAt);
+        nativeUi.mapScanStatus.textContent = scanLabel;
+        nativeUi.mapEmptyState?.classList.toggle("hidden", runtime.mapScanInProgress || networks.length > 0);
+        nativeUi.mapAlertText.innerHTML = live
+          ? `Gateway: ${escapeHtml(runtime.lastGatewayIp || "Unknown")}<br/>Last Sync: ${escapeHtml(formatScanTime(runtime.lastScanCapturedAt))}<br/>Source: ${escapeHtml(runtime.lastScanSource.toUpperCase())}`
+          : "Trigger Scan To Populate<br/>Last Sync: Never<br/>Source: Native Bridge";
+      }
+
+      function createHoloMapRenderer() {
+        const viewport = nativeUi.holoMapViewport;
+        const canvas = nativeUi.holoMapCanvas;
+        if (!viewport || !canvas) {
+          return {
+            start() {},
+            stop() {},
+            resize() {},
+            sync() {},
+            setScanState() {},
+            setCloakState() {},
+            destroy() {},
+          };
+        }
+        const ctx = canvas.getContext("2d", { alpha: true });
+        if (!ctx) {
+          return {
+            start() {},
+            stop() {},
+            resize() {},
+            sync() {},
+            setScanState() {},
+            setCloakState() {},
+            destroy() {},
+          };
+        }
+
+        const mapState = {
+          hoveredIndex: -1,
+          selectedIndex: -1,
+          pointerId: null,
+          dragging: false,
+          dragStartX: 0,
+          dragStartY: 0,
+          dragMove: 0,
+          panX: 0,
+          panY: 0,
+          targetPanX: 0,
+          targetPanY: 0,
+          zoom: 1,
+          targetZoom: 1,
+          cameraX: 0,
+          cameraY: 0,
+          targetCameraX: 0,
+          targetCameraY: 0,
+          scanWaveRadius: 0,
+          scanWavePulse: 0,
+          discoverAt: new Map(),
+          nodes: [],
+          drawNodes: [],
+          links: [],
+          running: false,
+          listenersAttached: false,
+          lastWidth: 0,
+          lastHeight: 0,
+          dpr: 1,
+          maxPackets: 24,
+          maxPacketTail: 0.055,
+          maxBgParticles: 28,
+          maxLinks: 0,
+          heavyMode: false,
+          beamDashSpeed: 0.8,
+          beamDashPattern: [9, 12],
+          beamDashPatternHeavy: [5, 13],
+        };
+
+        const MAX_PACKET_POOL = 160;
+        const packetPool = Array.from({ length: MAX_PACKET_POOL }, () => ({
+          active: false,
+          from: 0,
+          to: 0,
+          t: 0,
+          speed: 0,
+          hueBias: 0,
+        }));
+        const bgParticles = Array.from({ length: 64 }, (_, index) => ({
+          ox: ((index * 37) % 100) / 100,
+          oy: ((index * 53) % 100) / 100,
+          drift: 0.00018 + ((index % 7) * 0.00003),
+          size: 0.8 + ((index % 5) * 0.45),
+          streak: 8 + ((index % 5) * 4),
+        }));
+        const screenProbe = { x: 0, y: 0, z: 0, scale: 1, orbitAngle: 0 };
+
+        let rafId = 0;
+        let lastTs = performance.now();
+
+        const attachListeners = () => {
+          if (mapState.listenersAttached) return;
+          viewport.addEventListener("pointerdown", onPointerDown);
+          viewport.addEventListener("pointermove", onPointerMove);
+          viewport.addEventListener("pointerup", onPointerUp);
+          viewport.addEventListener("pointercancel", onPointerUp);
+          viewport.addEventListener("pointerleave", onPointerLeave);
+          viewport.addEventListener("wheel", onWheel, { passive: false });
+          window.addEventListener("deviceorientation", onTilt);
+          mapState.listenersAttached = true;
+        };
+
+        const detachListeners = () => {
+          if (!mapState.listenersAttached) return;
+          viewport.removeEventListener("pointerdown", onPointerDown);
+          viewport.removeEventListener("pointermove", onPointerMove);
+          viewport.removeEventListener("pointerup", onPointerUp);
+          viewport.removeEventListener("pointercancel", onPointerUp);
+          viewport.removeEventListener("pointerleave", onPointerLeave);
+          viewport.removeEventListener("wheel", onWheel);
+          window.removeEventListener("deviceorientation", onTilt);
+          mapState.listenersAttached = false;
+        };
+
+        const resize = () => {
+          const rect = viewport.getBoundingClientRect();
+          const ratio = Math.min(window.devicePixelRatio || 1, 2);
+          canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+          canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+          canvas.style.width = `${rect.width}px`;
+          canvas.style.height = `${rect.height}px`;
+          ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+          mapState.lastWidth = rect.width;
+          mapState.lastHeight = rect.height;
+          mapState.dpr = ratio;
+          recomputePerfCaps();
+        };
+
+        const recomputePerfCaps = () => {
+          const nodeCount = mapState.nodes.length;
+          const scale = mapState.dpr > 1.4 ? 0.75 : 1;
+          mapState.heavyMode = nodeCount > 80;
+          const overdriveBoost = runtime.mapOverdriveEnabled ? 1.35 : 1;
+          mapState.maxPackets = Math.max(6, Math.floor((nodeCount > 80 ? 10 : nodeCount > 40 ? 22 : 34) * scale * overdriveBoost));
+          mapState.maxPacketTail = mapState.heavyMode ? 0.03 : 0.055;
+          mapState.maxBgParticles = Math.max(10, Math.floor((mapState.heavyMode ? 18 : nodeCount > 48 ? 30 : 44) * scale));
+          mapState.maxLinks = Math.max(10, Math.min(nodeCount, mapState.heavyMode ? 72 : 120));
+          mapState.beamDashSpeed = (mapState.heavyMode ? 0.42 : 0.8) * overdriveBoost;
+        };
+
+        const toScreenPoint = (target, node, timeMs) => {
+          const cX = mapState.lastWidth * 0.5 + mapState.panX;
+          const cY = mapState.lastHeight * 0.5 + mapState.panY;
+          const t = timeMs * 0.001;
+          const scanSpeedFactor = Math.max(0.55, Number(runtime.config?.scanSpeed ?? 50) / 50);
+          const orbitSpeed = (runtime.mapScanInProgress ? 0.65 : 0.22) * scanSpeedFactor * (runtime.mapOverdriveEnabled ? 1.35 : 1);
+          const orbitAngle = node.angle + t * orbitSpeed + (node.index * 0.07);
+          const bob = Math.sin(t * 1.7 + node.index) * 7;
+          target.x = cX + Math.cos(orbitAngle) * node.ring * mapState.zoom;
+          target.y = cY + Math.sin(orbitAngle) * node.ring * 0.62 * mapState.zoom + bob;
+          const zRaw = Math.sin(orbitAngle * 0.85 + node.depthSeed * Math.PI * 2);
+          target.z = (zRaw + 1) * 0.5;
+          target.scale = 0.62 + (target.z * 0.8);
+          target.orbitAngle = orbitAngle;
+          return target;
+        };
+
+        const pickNodeAt = (x, y, timeMs) => {
+          let hit = -1;
+          let hitDepth = -Infinity;
+          for (const node of mapState.nodes) {
+            const screen = toScreenPoint(screenProbe, node, timeMs);
+            const radius = 8 + screen.scale * 7;
+            const dx = x - screen.x;
+            const dy = y - screen.y;
+            if ((dx * dx) + (dy * dy) <= radius * radius && screen.z >= hitDepth) {
+              hit = node.index;
+              hitDepth = screen.z;
+            }
+          }
+          return hit;
+        };
+
+        const setTooltip = (clientX, clientY, node) => {
+          if (!nativeUi.holoMapTooltip || !node) return;
+          nativeUi.holoMapTooltip.innerHTML = `${escapeHtml(formatHostname(node.network, `Device_${node.index + 1}`))}<br/><span style="opacity:.65">${escapeHtml(node.network.ipAddress || "N/A")} // ${escapeHtml(formatMac(node.network))}</span>`;
+          const rect = viewport.getBoundingClientRect();
+          nativeUi.holoMapTooltip.style.left = `${clientX - rect.left}px`;
+          nativeUi.holoMapTooltip.style.top = `${clientY - rect.top}px`;
+          nativeUi.holoMapTooltip.classList.add("is-visible");
+        };
+
+        const hideTooltip = () => {
+          nativeUi.holoMapTooltip?.classList.remove("is-visible");
+        };
+
+        const findNodeByIndex = (index) => mapState.nodes.find((item) => item.index === index);
+
+        const rebuildLinkCache = () => {
+          const nodeCount = mapState.drawNodes.length;
+          const targetCount = Math.min(nodeCount, mapState.maxLinks);
+          if (mapState.links.length < targetCount) {
+            for (let i = mapState.links.length; i < targetCount; i += 1) {
+              mapState.links.push({
+                from: 0,
+                to: 0,
+                activity: 0,
+                hot: false,
+                dashOffset: 0,
+                pulseT: 0,
+              });
+            }
+          }
+          mapState.links.length = targetCount;
+          for (let i = 0; i < targetCount; i += 1) {
+            const link = mapState.links[i];
+            link.from = -1;
+            link.to = i;
+            link.hot = false;
+            link.activity = 0;
+            link.dashOffset = 0;
+            link.pulseT = 0;
+          }
+        };
+
+        const updatePacketPool = (ts, linkCount) => {
+          let activeCount = 0;
+          for (let i = 0; i < packetPool.length; i += 1) {
+            const packet = packetPool[i];
+            if (!packet.active) continue;
+            packet.t += packet.speed;
+            if (packet.t >= 1) {
+              packet.active = false;
+              continue;
+            }
+            activeCount += 1;
+          }
+          if (!runtime.mapScanInProgress && runtime.lastScanSource === "none") return;
+          if (linkCount < 1) return;
+          const desired = Math.min(mapState.maxPackets, Math.max(4, Math.floor(linkCount * (runtime.mapScanInProgress ? 0.45 : 0.16))));
+          if (activeCount >= desired) return;
+          for (let i = 0; i < packetPool.length && activeCount < desired; i += 1) {
+            const packet = packetPool[i];
+            if (packet.active) continue;
+            const from = Math.floor((ts * 0.001 + i * 1.7) % Math.max(1, linkCount));
+            packet.active = true;
+            packet.from = from;
+            packet.to = from;
+            packet.t = (i % 7) / 7;
+            packet.speed = runtime.mapScanInProgress ? 0.022 + ((i % 5) * 0.003) : 0.009 + ((i % 4) * 0.002);
+            packet.hueBias = i % 2;
+            activeCount += 1;
+          }
+        };
+
+        const animate = (ts) => {
+          if (!mapState.running) return;
+          const dt = Math.min(48, ts - lastTs);
+          lastTs = ts;
+
+          mapState.panX += (mapState.targetPanX - mapState.panX) * 0.14;
+          mapState.panY += (mapState.targetPanY - mapState.panY) * 0.14;
+          mapState.zoom += (mapState.targetZoom - mapState.zoom) * 0.15;
+          mapState.cameraX += (mapState.targetCameraX - mapState.cameraX) * 0.07;
+          mapState.cameraY += (mapState.targetCameraY - mapState.cameraY) * 0.07;
+
+          if (runtime.mapScanInProgress) {
+            const scanSpeedFactor = Math.max(0.55, Number(runtime.config?.scanSpeed ?? 50) / 50);
+            mapState.scanWaveRadius += dt * 0.22 * scanSpeedFactor * (runtime.mapOverdriveEnabled ? 1.3 : 1);
+            if (mapState.scanWaveRadius > Math.max(mapState.lastWidth, mapState.lastHeight) * 0.7) {
+              mapState.scanWaveRadius = 0;
+            }
+            mapState.scanWavePulse += dt * 0.005;
+          }
+
+          const centerX = (mapState.lastWidth * 0.5) + mapState.panX + mapState.cameraX;
+          const centerY = (mapState.lastHeight * 0.5) + mapState.panY + mapState.cameraY;
+
+          ctx.clearRect(0, 0, mapState.lastWidth, mapState.lastHeight);
+          const radial = ctx.createRadialGradient(centerX, centerY, 18, centerX, centerY, Math.max(mapState.lastWidth, mapState.lastHeight) * 0.75);
+          radial.addColorStop(0, themeRgba("--ring-0", 0.12, "#00d4ff"));
+          radial.addColorStop(0.5, themeRgba("--panel-1", 0.22, "#111c25"));
+          radial.addColorStop(1, themeRgba("--bg-0", 0.94, "#000000"));
+          ctx.fillStyle = radial;
+          ctx.fillRect(0, 0, mapState.lastWidth, mapState.lastHeight);
+
+          // background pass: drifting particles + faint arc grid
+          const driftT = ts * 0.001;
+          const bgCount = Math.min(mapState.maxBgParticles, bgParticles.length);
+          for (let i = 0; i < bgCount; i += 1) {
+            const p = bgParticles[i];
+            const x = ((p.ox + driftT * p.drift) % 1) * mapState.lastWidth;
+            const y = ((p.oy + driftT * p.drift * 0.62) % 1) * mapState.lastHeight;
+            ctx.fillStyle = themeRgba("--particle-0", 0.08 + (i % 4) * 0.02, "#7df4ff");
+            ctx.beginPath();
+            ctx.arc(x, y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+            if (!mapState.heavyMode && i % 3 === 0) {
+              ctx.strokeStyle = themeRgba("--particle-0", 0.04 + ((i % 5) * 0.01), "#7df4ff");
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(x, y);
+              ctx.lineTo(x - p.streak, y + p.streak * 0.45);
+              ctx.stroke();
+            }
+          }
+
+          ctx.save();
+          ctx.translate(centerX, centerY);
+          for (let ring = 1; ring <= 5; ring += 1) {
+            ctx.strokeStyle = themeRgba("--ring-0", 0.04 + ring * 0.025, "#00d4ff");
+            ctx.lineWidth = 1;
+            ctx.setLineDash(ring % 2 === 0 ? mapState.beamDashPatternHeavy : mapState.beamDashPattern);
+            ctx.lineDashOffset = -(ts * 0.008 * (ring % 2 === 0 ? 1 : -1)) - (ring * 4);
+            ctx.beginPath();
+            ctx.ellipse(0, 0, ring * 66 * mapState.zoom, ring * 40 * mapState.zoom, Math.sin(ts * 0.00022 + ring) * 0.06, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.setLineDash([]);
+          if (runtime.mapScanInProgress) {
+            const wave = mapState.scanWaveRadius;
+            ctx.strokeStyle = themeRgba("--good-0", 0.16 + Math.sin(mapState.scanWavePulse) * 0.08, "#b7ff2a");
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, wave, wave * 0.58, 0, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.restore();
+
+          // build draw node cache (reused array, no per-frame object allocations)
+          const nodeCount = mapState.nodes.length;
+          if (mapState.drawNodes.length < nodeCount) {
+            for (let i = mapState.drawNodes.length; i < nodeCount; i += 1) {
+              mapState.drawNodes.push({ node: null, screen: { x: 0, y: 0, z: 0, scale: 1, orbitAngle: 0 }, depthScore: 0 });
+            }
+          }
+          for (let i = 0; i < nodeCount; i += 1) {
+            const cached = mapState.drawNodes[i];
+            cached.node = mapState.nodes[i];
+            toScreenPoint(cached.screen, mapState.nodes[i], ts);
+            cached.depthScore = cached.screen.z;
+          }
+          mapState.drawNodes.length = nodeCount;
+          mapState.drawNodes.sort((a, b) => a.depthScore - b.depthScore);
+          rebuildLinkCache();
+
+          const linkCount = mapState.links.length;
+          updatePacketPool(ts, linkCount);
+
+          // links + animated beams pass
+          for (let i = 0; i < linkCount; i += 1) {
+            const link = mapState.links[i];
+            const next = mapState.drawNodes[link.to];
+            if (!next) break;
+
+            const currX = centerX;
+            const currY = centerY;
+            const nextX = next.screen.x + mapState.cameraX * next.screen.scale * 0.2;
+            const nextY = next.screen.y + mapState.cameraY * next.screen.scale * 0.2;
+            const hot = next.node.index === mapState.hoveredIndex;
+            const activity = runtime.mapScanInProgress ? 1 : (runtime.lastScanSource === "none" ? 0.18 : 0.52);
+            link.hot = hot;
+            link.activity = activity;
+            link.dashOffset = -((ts * 0.024 * mapState.beamDashSpeed) + (i * 6.5));
+            link.pulseT = ((ts * 0.0014) + (i * 0.17)) % 1;
+
+            const beamGradient = ctx.createLinearGradient(currX, currY, nextX, nextY);
+            beamGradient.addColorStop(0, themeRgba("--ring-0", 0.12 + activity * 0.14, "#00d4ff"));
+            beamGradient.addColorStop(0.5, themeRgba("--accent-1", 0.2 + activity * 0.16, "#a855f7"));
+            beamGradient.addColorStop(1, themeRgba("--ring-0", 0.10 + activity * 0.12, "#00d4ff"));
+
+            ctx.strokeStyle = hot ? themeRgba("--good-0", 0.18 + activity * 0.16, "#b7ff2a") : themeRgba("--accent-1", 0.12 + activity * 0.1, "#a855f7");
+            ctx.globalAlpha = hot ? 0.34 : 0.16 + activity * 0.12;
+            ctx.lineWidth = hot ? 4.2 : 2.4;
+            ctx.beginPath();
+            ctx.moveTo(currX, currY);
+            ctx.lineTo(nextX, nextY);
+            ctx.stroke();
+
+            ctx.setLineDash(mapState.heavyMode ? mapState.beamDashPatternHeavy : mapState.beamDashPattern);
+            ctx.lineDashOffset = link.dashOffset;
+            ctx.strokeStyle = beamGradient;
+            ctx.globalAlpha = hot ? 0.95 : 0.46 + activity * 0.08;
+            ctx.lineWidth = hot ? 2.6 : 1.2;
+            ctx.beginPath();
+            ctx.moveTo(currX, currY);
+            ctx.lineTo(nextX, nextY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            if (!mapState.heavyMode && (runtime.mapScanInProgress || runtime.lastScanSource !== "none")) {
+              const px = currX + (nextX - currX) * link.pulseT;
+              const py = currY + (nextY - currY) * link.pulseT;
+              ctx.fillStyle = hot ? themeRgba("--good-0", 0.92, "#b7ff2a") : themeRgba("--ring-0", 0.75, "#00d4ff");
+              ctx.shadowColor = ctx.fillStyle;
+              ctx.shadowBlur = 14;
+              ctx.beginPath();
+              ctx.arc(px, py, 2.2, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.shadowBlur = 0;
+            }
+            ctx.globalAlpha = 1;
+          }
+
+          // packet travel pass
+          for (let i = 0; i < packetPool.length; i += 1) {
+            const packet = packetPool[i];
+            if (!packet.active || linkCount < 1) continue;
+            const toLink = mapState.links[packet.to % linkCount];
+            const toNode = mapState.drawNodes[toLink?.to ?? 0];
+            if (!toNode) continue;
+            const sx = centerX + (toNode.screen.x - centerX) * packet.t;
+            const sy = centerY + (toNode.screen.y - centerY) * packet.t;
+            const tx = centerX + (toNode.screen.x - centerX) * Math.max(0, packet.t - mapState.maxPacketTail);
+            const ty = centerY + (toNode.screen.y - centerY) * Math.max(0, packet.t - mapState.maxPacketTail);
+            ctx.strokeStyle = packet.hueBias ? themeRgba("--good-0", 0.65, "#b7ff2a") : themeRgba("--beam-0", 0.52, "#00f2ff");
+            ctx.lineWidth = mapState.heavyMode ? 1 : 1.4;
+            ctx.beginPath();
+            ctx.moveTo(tx, ty);
+            ctx.lineTo(sx, sy);
+            ctx.stroke();
+            ctx.fillStyle = packet.hueBias ? themeRgba("--good-0", 0.9, "#b7ff2a") : themeRgba("--ring-0", 0.85, "#00d4ff");
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.shadowBlur = mapState.heavyMode ? 0 : 12;
+            ctx.beginPath();
+            ctx.arc(sx, sy, mapState.heavyMode ? 1.1 : 1.6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          }
+
+          // core + node pass
+          const coreGlow = 20 + (Math.sin(ts * 0.004) * 3);
+          const coreSweep = (ts * 0.0011) % (Math.PI * 2);
+          ctx.fillStyle = themeRgba("--panel-1", 0.9, "#111c25");
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, 22, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = themeRgba("--ring-0", 0.72, "#00d4ff");
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, coreGlow, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.fillStyle = themeRgba("--good-0", 0.95, "#b7ff2a");
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = themeRgba("--accent-1", 0.38, "#a855f7");
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, coreGlow + 9, coreSweep, coreSweep + 1.35);
+          ctx.stroke();
+          if (!mapState.heavyMode) {
+            ctx.strokeStyle = themeRgba("--beam-0", 0.24, "#00f2ff");
+            ctx.lineWidth = 4.4;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 12, coreSweep * 0.7, coreSweep * 0.7 + 0.8);
+            ctx.stroke();
+          }
+
+          const wave = mapState.scanWaveRadius;
+          for (let i = 0; i < mapState.drawNodes.length; i += 1) {
+            const entry = mapState.drawNodes[i];
+            const node = entry.node;
+            const screen = entry.screen;
+            const accent = node.accent;
+            const isHover = node.index === mapState.hoveredIndex;
+            const isSelected = node.index === mapState.selectedIndex;
+            const discoveredAt = mapState.discoverAt.get(node.key) || ts;
+            const discoverPhase = Math.min(1, (ts - discoveredAt) / 560);
+            const settleJitter = (1 - discoverPhase) * Math.sin(ts * 0.024 + node.index) * 2.4;
+            const materializeScale = (0.6 + discoverPhase * 0.4) * (runtime.mapScanInProgress ? Math.min(1, discoverPhase * 1.08) : 1);
+            const baseOpacity = (0.22 + (screen.z * 0.5)) * (runtime.mapCloakEnabled ? 0.45 : 1);
+            const drawX = screen.x + mapState.cameraX * screen.scale * 0.35 + settleJitter;
+            const drawY = screen.y + mapState.cameraY * screen.scale * 0.35 - settleJitter * 0.5;
+            const radius = (3.8 + screen.scale * 4.5) * materializeScale * (isSelected ? 1.24 : 1);
+
+            const dx = drawX - centerX;
+            const dy = (drawY - centerY) / 0.58;
+            const waveDist = Math.hypot(dx, dy);
+            const waveBoost = runtime.mapScanInProgress && Math.abs(waveDist - wave) < 18 ? 0.28 : 0;
+            const haloBoost = (1 - discoverPhase) * 0.4 + waveBoost * 0.8;
+
+            ctx.globalAlpha = Math.min(1, baseOpacity + waveBoost);
+            if (!mapState.heavyMode) {
+              ctx.filter = `blur(${Math.max(0, (1 - screen.scale) * 2.1).toFixed(2)}px)`;
+            }
+            if (!mapState.heavyMode) {
+              ctx.fillStyle = accent.glow;
+              ctx.beginPath();
+              ctx.arc(drawX, drawY, radius + 5 + (screen.z * 5) + haloBoost * 8, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.fillStyle = accent.color;
+            ctx.beginPath();
+            ctx.arc(drawX, drawY, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.filter = "none";
+            ctx.globalAlpha = isHover || isSelected ? 1 : Math.min(1, baseOpacity + 0.26 + waveBoost * 0.5);
+            ctx.strokeStyle = isHover ? getThemeColor("--good-0", "#b7ff2a") : accent.color;
+            ctx.lineWidth = isHover ? 2.6 : 1.2;
+            ctx.beginPath();
+            ctx.arc(drawX, drawY, radius + (isHover ? 4.4 : 2.2), 0, Math.PI * 2);
+            ctx.stroke();
+            if (waveBoost > 0.1) {
+              ctx.globalAlpha = Math.min(1, 0.5 + waveBoost);
+              ctx.strokeStyle = themeRgba("--good-0", 0.75, "#b7ff2a");
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.arc(drawX, drawY, radius + 7 + (waveBoost * 14), 0, Math.PI * 2);
+              ctx.stroke();
+            }
+
+            const shouldDrawLabel = mapState.heavyMode
+              ? (isHover || isSelected)
+              : (isHover || isSelected || screen.scale > 1.12);
+            if (shouldDrawLabel) {
+              ctx.globalAlpha = Math.min(0.9, baseOpacity + 0.2 + waveBoost);
+              ctx.fillStyle = themeRgba("--text-0", 0.88, "#cef8ff");
+              ctx.font = "10px Orbitron, sans-serif";
+              ctx.textAlign = "center";
+              ctx.fillText(node.label, drawX, drawY - 12 - (radius * 0.6));
+            }
+            ctx.globalAlpha = 1;
+          }
+
+          rafId = requestAnimationFrame(animate);
+        };
+
+        const onPointerMove = (event) => {
+          const rect = viewport.getBoundingClientRect();
+          const localX = event.clientX - rect.left;
+          const localY = event.clientY - rect.top;
+          if (mapState.dragging && mapState.pointerId === event.pointerId) {
+            const dx = event.clientX - mapState.dragStartX;
+            const dy = event.clientY - mapState.dragStartY;
+            mapState.dragMove += Math.abs(dx) + Math.abs(dy);
+            mapState.targetPanX += dx;
+            mapState.targetPanY += dy;
+            mapState.dragStartX = event.clientX;
+            mapState.dragStartY = event.clientY;
+          }
+          mapState.targetCameraX = ((localX / Math.max(1, rect.width)) - 0.5) * 22;
+          mapState.targetCameraY = ((localY / Math.max(1, rect.height)) - 0.5) * 22;
+          const hover = pickNodeAt(localX, localY, performance.now());
+          mapState.hoveredIndex = hover;
+          if (hover >= 0) {
+            const node = findNodeByIndex(hover);
+            setTooltip(event.clientX, event.clientY, node);
+          } else {
+            hideTooltip();
+          }
+        };
+
+        const onPointerDown = (event) => {
+          mapState.pointerId = event.pointerId;
+          mapState.dragging = true;
+          mapState.dragMove = 0;
+          mapState.dragStartX = event.clientX;
+          mapState.dragStartY = event.clientY;
+          viewport.classList.add("is-panning");
+          viewport.setPointerCapture(event.pointerId);
+        };
+
+        const onPointerUp = (event) => {
+          if (mapState.dragging && mapState.pointerId === event.pointerId && mapState.dragMove < 8) {
+            const rect = viewport.getBoundingClientRect();
+            const hit = pickNodeAt(event.clientX - rect.left, event.clientY - rect.top, performance.now());
+            if (hit >= 0) {
+              mapState.selectedIndex = hit;
+              const selected = findNodeByIndex(hit);
+              if (selected) {
+                showCfgStatus(`Node selected: ${selected.network.hostname || selected.network.ipAddress || `Node ${hit + 1}`}`);
+                nativeUi.mapAlertText.innerHTML = `Selected: ${escapeHtml(formatHostname(selected.network, `Device_${hit + 1}`))}<br/>IP: ${escapeHtml(selected.network.ipAddress || "N/A")}<br/>RTT: ${escapeHtml(formatLatency(selected.network.rttMs))}`;
+                openDeviceDetail(selected.network);
+              }
+            }
+          }
+          mapState.dragging = false;
+          mapState.pointerId = null;
+          viewport.classList.remove("is-panning");
+          hideTooltip();
+        };
+
+        const onPointerLeave = () => {
+          mapState.hoveredIndex = -1;
+          mapState.targetCameraX = 0;
+          mapState.targetCameraY = 0;
+          hideTooltip();
+        };
+
+        const onWheel = (event) => {
+          event.preventDefault();
+          const dir = event.deltaY > 0 ? -0.08 : 0.08;
+          mapState.targetZoom = clamp(mapState.targetZoom + dir, 0.65, 1.55);
+        };
+
+        const onTilt = (event) => {
+          const gamma = Number(event.gamma || 0);
+          const beta = Number(event.beta || 0);
+          if (Number.isNaN(gamma) || Number.isNaN(beta)) return;
+          mapState.targetCameraX = clamp(gamma * 0.25, -18, 18);
+          mapState.targetCameraY = clamp(beta * 0.12, -18, 18);
+        };
+
+        return {
+          start() {
+            if (mapState.running) return;
+            attachListeners();
+            resize();
+            mapState.running = true;
+            lastTs = performance.now();
+            rafId = requestAnimationFrame(animate);
+          },
+          stop() {
+            mapState.running = false;
+            if (rafId) {
+              cancelAnimationFrame(rafId);
+              rafId = 0;
+            }
+            detachListeners();
+            hideTooltip();
+            mapState.pointerId = null;
+            viewport.classList.remove("is-panning");
+          },
+          resize,
+          sync(networks) {
+            const now = performance.now();
+            const nextKeys = new Set();
+            mapState.nodes = networks.map((network, index) => {
+              const key = network.ipAddress || network.macAddress || `node-${index}`;
+              nextKeys.add(key);
+              if (!mapState.discoverAt.has(key)) {
+                mapState.discoverAt.set(key, now);
+              }
+              const layout = mapPositionFor(index, networks.length);
+              return {
+                key,
+                index,
+                network,
+                accent: deviceAccent(network),
+                angle: layout.angle,
+                ring: layout.ring,
+                depthSeed: layout.depthSeed,
+                label: String(network.hostname || network.ipAddress || `Node_${index + 1}`).slice(0, 18),
+              };
+            });
+            for (const key of [...mapState.discoverAt.keys()]) {
+              if (!nextKeys.has(key)) {
+                mapState.discoverAt.delete(key);
+              }
+            }
+            if (mapState.selectedIndex >= mapState.nodes.length) {
+              mapState.selectedIndex = -1;
+            }
+            recomputePerfCaps();
+          },
+          setScanState(scanning) {
+            if (scanning) {
+              mapState.scanWaveRadius = 0;
+              mapState.scanWavePulse = 0;
+            }
+          },
+          setCloakState(enabled) {
+            canvas.style.opacity = enabled ? "0.58" : "1";
+          },
+          setOverdriveState(enabled) {
+            viewport.style.filter = enabled ? "saturate(1.18) brightness(1.06)" : "none";
+            recomputePerfCaps();
+          },
+          destroy() {
+            this.stop();
+          },
+        };
+      }
+
+      const holoMapRenderer = createHoloMapRenderer();
+      rendererRegistry?.register?.("speedtest", speedtestRendererController);
+      rendererRegistry?.register?.("map", holoMapRenderer);
+
+      function renderMapFromScan() {
+        const networks = filteredMapNetworks();
+        updateMapStatus(networks);
+        holoMapRenderer.sync(networks);
+
+        nativeUi.mapNodesList.innerHTML = networks.slice(0, 6).map((network, index) => {
+          const accent = deviceAccent(network);
+          const name = escapeHtml(formatHostname(network, `Device_${index + 1}`));
+          const ip = escapeHtml(network.ipAddress || "Unknown IP");
+          const latency = escapeHtml(formatLatency(network.rttMs));
+          const vendor = escapeHtml(formatVendor(network));
+          return `
+            <div class="relative group holo-interactive cursor-pointer" data-device-ip="${escapeHtml(network.ipAddress)}">
+              <div class="holo-panel-soft border rounded p-3 aspect-video flex flex-col justify-between overflow-hidden relative holo-bloom" style="border-color:${accent.color}66; box-shadow:0 0 12px ${accent.glow};">
+                <div class="absolute inset-0 opacity-10" style="background:${accent.color};"></div>
+                <div class="flex justify-between items-start">
+                  <span class="text-[10px] font-mono uppercase" style="color:${accent.color};">Node_${index + 1}</span>
+                  <span class="material-symbols-outlined text-xs holo-text-accent-strong">${network.isGateway ? "router" : "lan"}</span>
+                </div>
+                <p class="holo-text-accent text-[11px] font-bold leading-none tracking-tight truncate">${name}</p>
+                <p class="text-[9px] holo-text-dim font-mono">${ip} // ${latency}</p>
+                <p class="text-[9px] holo-text-dim font-mono truncate">${vendor}</p>
+              </div>
+            </div>
+          `;
+        }).join("");
+        bindDeviceListClicks();
+      }
+
+      function syncBridgeState(pushConfigToggle) {
+        const bridgeState = nativeBridge?.request?.("getBridgeState");
+        runtime.bridgeState = bridgeState || runtime.bridgeState;
+        if (pushConfigToggle && bridgeState) {
+          cfgCtrls.bridgeEnabled.checked = !!bridgeState.enabled;
+        }
+        updateBridgeUi();
+      }
+
+      function refreshDeviceInfo() {
+        const result = nativeBridge?.request?.("getDeviceInfo");
+        if (result?.ok && result.deviceInfo) {
+          runtime.lastDeviceInfo = result.deviceInfo;
+          updateDeviceUi();
+          return true;
+        }
+        runtime.lastDeviceInfo = null;
+        updateDeviceUi();
+        return false;
+      }
+
+      function loadConfig() {
+        const raw = nativeBridge?.storage?.get?.(cfgKey) ?? localStorage.getItem(cfgKey);
+        let data = defaultConfig();
+        if (raw) {
+          try {
+            data = { ...data, ...JSON.parse(raw) };
+          } catch {}
+        }
+        setConfigControls(data);
+        applyConfigPreview(getCurrentConfig());
+      }
+
+      function saveConfig() {
+        const data = getCurrentConfig();
+        nativeBridge?.storage?.set?.(cfgKey, JSON.stringify(data));
+        if (!nativeBridge?.storage?.set) {
+          localStorage.setItem(cfgKey, JSON.stringify(data));
+        }
+        applyConfigPreview(data);
+        if (nativeBridge?.available?.()) {
+          const bridgeState = nativeBridge.request("setBridgeEnabled", !!data.bridgeEnabled);
+          if (bridgeState) {
+            runtime.bridgeState = bridgeState;
+          }
+        }
+        syncBridgeState(false);
+        if (runtime.bridgeState.enabled) {
+          refreshDeviceInfo();
+        } else {
+          runtime.lastDeviceInfo = null;
+          updateDeviceUi();
+        }
+        if (runtime.lastScanResults.length > 0) {
+          renderMapFromScan();
+        }
+        showCfgStatus("Settings saved.");
+        showBanner("Settings saved.", "success");
+      }
+
+      function resetConfig() {
+        nativeBridge?.storage?.remove?.(cfgKey);
+        if (!nativeBridge?.storage?.remove) {
+          localStorage.removeItem(cfgKey);
+        }
+        const defaults = defaultConfig();
+        setConfigControls(defaults);
+        applyConfigPreview(defaults);
+        if (nativeBridge?.available?.()) {
+          const bridgeState = nativeBridge.request("setBridgeEnabled", false);
+          if (bridgeState) {
+            runtime.bridgeState = bridgeState;
+          }
+        }
+        runtime.lastDeviceInfo = null;
+        updateDeviceUi();
+        syncBridgeState(false);
+        renderWifiNetworks([], "none", "Waiting for LAN device data");
+        showCfgStatus("Settings reset.");
+        showBanner("Settings reset.", "success");
+      }
+
+      function applyPerfMode(mode) {
+        const overlay = document.querySelector(".vhs-overlay");
+        const buttons = document.querySelectorAll(".cybr-btn");
+        if (mode === "low") {
+          overlay.style.opacity = "0.15";
+          buttons.forEach(btn => {
+            btn.classList.remove("tap-glow");
+            btn.classList.add("tap-glow-low");
+          });
+        } else {
+          overlay.style.opacity = "0.30";
+          buttons.forEach(btn => {
+            btn.classList.remove("tap-glow-low");
+            btn.classList.add("tap-glow");
+          });
+        }
+      }
+
+      function exportDiagnostics() {
+        syncBridgeState(false);
+        if (!runtime.bridgeState.available || !runtime.bridgeState.enabled) {
+          showCfgStatus("Enable Native Bridge before exporting diagnostics.");
+          showBanner("Enable Native Bridge before exporting diagnostics.", "warn");
+          return;
+        }
+        const payload = {
+          capturedAt: new Date().toISOString(),
+          config: getCurrentConfig(),
+          lastScan: {
+            source: runtime.lastScanSource,
+            count: runtime.lastScanResults.length,
+            results: runtime.lastScanResults,
+          },
+          engine: {
+            state,
+            latency: ui.latencyVal.textContent,
+            jitter: ui.jitterVal.textContent,
+            loss: ui.lossVal.textContent,
+            down: ui.downVal.textContent,
+            up: ui.upVal.textContent,
+          },
+        };
+        const result = nativeBridge.request("exportDiagnostics", JSON.stringify(payload));
+        if (!result || result?.ok === false) {
+          showCfgStatus(result?.message || "Diagnostics export failed.");
+        } else {
+          nativeUi.wifiScanState.textContent = "Export Requested";
+          showBanner("Diagnostics export requested.", "success");
+        }
+      }
+
+      function buildLanScanConfig() {
+        const perfMode = cfgCtrls.perfMode.value;
+        const scanSpeed = Number(runtime.config?.scanSpeed ?? cfgCtrls.scanSpeed.value ?? 50);
+        const timeoutBias = Math.max(0.6, (100 - scanSpeed) / 100);
+        return {
+          maxConcurrency: perfMode === "low" ? 32 : 64,
+          probeTimeoutMs: Math.round((perfMode === "low" ? 460 : 340) * timeoutBias),
+          maxTargets: 254,
+          maxSubnetPrefix: 24,
+          allowPortFallback: true,
+          fallbackPorts: [443, 80, 53, 22, 554],
+        };
+      }
+
+      function requestNativeWifiScan(userInitiated) {
+        syncBridgeState(false);
+        if (!runtime.bridgeState.available || !runtime.bridgeState.enabled) {
+          if (userInitiated) {
+            showCfgStatus("Enable Native Bridge first.");
+            showBanner("Enable Native Bridge before scanning LAN.", "warn");
+          }
+          return;
+        }
+        if (!runtime.bridgeState.canScan) {
+          nativeUi.wifiScanState.textContent = "No IPv4 Link";
+          nativeUi.wifiScanMeta.textContent = "Connect to a local network first";
+          updateWifiListState(runtime.lastScanResults, runtime.lastScanSource, nativeUi.wifiScanMeta.textContent);
+          if (userInitiated) showBanner("Connect to a local IPv4 network first.", "warn");
+          return;
+        }
+        const result = nativeBridge.request("lanScanStart", JSON.stringify(buildLanScanConfig()));
+        if (!result || result?.ok === false) {
+          nativeUi.wifiScanState.textContent = result?.code || "Error";
+          if (userInitiated) {
+            showCfgStatus(result?.message || "LAN discovery failed.");
+          }
+        } else {
+          runtime.mapScanInProgress = true;
+          holoMapRenderer.setScanState(true);
+          nativeUi.wifiScanState.textContent = "Scanning";
+          nativeUi.wifiScanMeta.textContent = "Native LAN discovery request sent to Android";
+          updateWifiListState(runtime.lastScanResults, runtime.lastScanSource, nativeUi.wifiScanMeta.textContent);
+          renderMapFromScan();
+          if (userInitiated) showBanner("LAN scan started.", "success");
+        }
+      }
+
+      function applyNativeSpeedtestUpdate(payload) {
+        applySpeedtestMetrics(payload);
+        syncTimer(payload.elapsedMs);
+
+        if (payload.phase === "ping") {
+          if (state !== State.PING) setPhase(State.PING);
+          ui.unitLabel.textContent = "ms";
+          cur.display = Number.isFinite(cur.ping) ? cur.ping : 0;
+          setMainReadout(cur.display);
+          const sweepTarget = lerp(needleForMbps(0), needleForMbps(120), clamp(Number(payload.progress || 0), 0, 1));
+          setNeedleTarget(sweepTarget);
+        } else if (payload.phase === "download") {
+          if (state !== State.DOWNLOAD) setPhase(State.DOWNLOAD);
+          cur.display = Number.isFinite(cur.down) ? cur.down : 0;
+          setThroughputReadout(cur.display);
+          setNeedleTarget(needleForMbps(cur.display));
+        } else if (payload.phase === "upload") {
+          if (state !== State.UPLOAD) setPhase(State.UPLOAD);
+          if (payload.uploadAvailable === false) {
+            cur.display = 0;
+            setMainReadout(0);
+            setNeedleTarget(needleForMbps(0));
+            ui.unitLabel.textContent = "Mbps";
+          } else {
+            cur.display = Number.isFinite(cur.up) ? cur.up : 0;
+            setThroughputReadout(cur.display);
+            setNeedleTarget(needleForMbps(cur.display));
+          }
+        }
+
+        ensureSpeedtestLoop();
+      }
+
+      function handleSpeedtestDone(payload) {
+        applySpeedtestMetrics(payload);
+        syncTimer(payload.elapsedMs);
+        cur.display = Number.isFinite(cur.down) ? cur.down : 0;
+        finishRun();
+      }
+
+      function handleSpeedtestError(payload) {
+        if (payload.code === "aborted" || payload.message === "Speedtest aborted.") {
+          if (state !== State.ABORTED) {
+            aborted = true;
+            setPhase(State.ABORTED);
+            lockButtons(false);
+          }
+          stopSpeedtestLoop();
+          setNeedleTarget(needleForMbps(0));
+          gaugeRenderer.render(performance.now(), cur.needleDeg, cur.display);
+          return;
+        }
+        aborted = true;
+        setPhase(State.ABORTED);
+        lockButtons(false);
+        ui.statusText.textContent = "ERROR";
+        stopSpeedtestLoop();
+        setNeedleTarget(needleForMbps(0));
+        gaugeRenderer.render(performance.now(), cur.needleDeg, cur.display);
+      }
+
+      function handleNativeEvent(event) {
+        const detail = event.detail || {};
+        const payload = detail.payload || {};
+        if (detail.type === "bridge_state") {
+          runtime.bridgeState = payload;
+          updateBridgeUi();
+          if (!payload.enabled && isSpeedtestRunning()) {
+            abortRun(false);
+          }
+          if (!payload.enabled && runtime.mapScanInProgress) {
+            runtime.mapScanInProgress = false;
+            holoMapRenderer.setScanState(false);
+          }
+          if (payload.enabled) {
+            refreshDeviceInfo();
+          } else {
+            runtime.lastDeviceInfo = null;
+            updateDeviceUi();
+          }
+          return;
+        }
+        if (detail.type === "lan_scan_device") {
+          const device = payload.device || null;
+          if (!device) return;
+          const next = [...runtime.lastScanResults];
+          const existingIndex = next.findIndex((item) => item.ipAddress === device.ipAddress);
+          if (existingIndex >= 0) next[existingIndex] = { ...next[existingIndex], ...device };
+          else next.push(device);
+          renderWifiNetworks(next, "real", `${next.length} LAN devices discovered`);
+          return;
+        }
+        if (detail.type === "lan_scan_done") {
+          runtime.mapScanInProgress = false;
+          holoMapRenderer.setScanState(false);
+          const results = Array.isArray(payload.devices) ? payload.devices : [];
+          runtime.lastGatewayIp = String(payload.gatewayIp || "");
+          runtime.lastLocalIp = String(payload.localIp || "");
+          runtime.lastSubnet = String(payload.subnet || "");
+          runtime.lastScanCapturedAt = Number(payload.capturedAt || Date.now());
+          if (results.length > 0) {
+            renderWifiNetworks(results, "real", `${payload.count || results.length} LAN devices captured`);
+            nativeUi.wifiScanState.textContent = "Live Results";
+            showBanner(`LAN scan complete. ${results.length} device${results.length === 1 ? "" : "s"} found.`, "success");
+          } else {
+            renderWifiNetworks([], "real", "No LAN devices detected");
+            nativeUi.wifiScanState.textContent = "No Results";
+            showBanner("LAN scan finished. No devices found.", "warn");
+          }
+          return;
+        }
+        if (detail.type === "lan_scan_status") {
+          const status = payload.status || "idle";
+          runtime.mapScanInProgress = ["started", "scanning", "in_progress", "progress"].includes(status);
+          if (runtime.mapScanInProgress) runtime.lastScanSource = "real";
+          if (!runtime.mapScanInProgress) {
+            holoMapRenderer.setScanState(false);
+          }
+          nativeUi.wifiScanState.textContent = status.replaceAll("_", " ").toUpperCase();
+          if (payload.gatewayIp) runtime.lastGatewayIp = String(payload.gatewayIp || "");
+          if (payload.localIp) runtime.lastLocalIp = String(payload.localIp || "");
+          if (payload.subnet) runtime.lastSubnet = String(payload.subnet || "");
+          if (payload.message) {
+            const pct = Number.isFinite(Number(payload.progress))
+              ? ` (${Math.round(Number(payload.progress) * 100)}%)`
+              : "";
+            nativeUi.wifiScanMeta.textContent = `${payload.message}${pct}`;
+            updateWifiListState(runtime.lastScanResults, runtime.lastScanSource, nativeUi.wifiScanMeta.textContent);
+          }
+          return;
+        }
+        if (detail.type === "lan_scan_error") {
+          runtime.mapScanInProgress = false;
+          holoMapRenderer.setScanState(false);
+          nativeUi.wifiScanState.textContent = "ERROR";
+          nativeUi.wifiScanMeta.textContent = payload.message || "LAN discovery failed";
+          updateWifiListState(runtime.lastScanResults, runtime.lastScanSource, nativeUi.wifiScanMeta.textContent);
+          showBanner(payload.message || "LAN discovery failed.", "error");
+          return;
+        }
+        if (detail.type === "export_status") {
+          if (payload.status === "saved") {
+            showCfgStatus("Diagnostics exported.");
+            showBanner("Diagnostics exported.", "success");
+          } else if (payload.status === "cancelled") {
+            showCfgStatus("Diagnostics export cancelled.");
+            showBanner("Diagnostics export cancelled.", "warn");
+          } else if (payload.status === "error") {
+            showCfgStatus(payload.message || "Diagnostics export failed.");
+            showBanner(payload.message || "Diagnostics export failed.", "error");
+          }
+          return;
+        }
+        if (detail.type === "speedtest_update") {
+          applyNativeSpeedtestUpdate(payload);
+          postToReplacementFrame("speed", "speedtest_update", payload);
+          return;
+        }
+        if (detail.type === "speedtest_done") {
+          handleSpeedtestDone(payload);
+          postToReplacementFrame("speed", "speedtest_done", payload);
+          return;
+        }
+        if (detail.type === "speedtest_error") {
+          handleSpeedtestError(payload);
+          postToReplacementFrame("speed", "speedtest_error", payload);
+          if (payload.message) showBanner(payload.message, payload.code === "aborted" ? "warn" : "error");
+        }
+      }
+
+      function onListTabSelected() {
+        syncBridgeState(false);
+        if (cfgCtrls.autoScan.checked && runtime.bridgeState.enabled && runtime.bridgeState.canScan) {
+          requestNativeWifiScan(false);
+          return;
+        }
+        if (runtime.lastScanResults.length === 0) {
+          nativeUi.wifiScanMeta.textContent = "Waiting for LAN device data";
+          updateWifiListState(runtime.lastScanResults, runtime.lastScanSource, nativeUi.wifiScanMeta.textContent);
+        }
+      }
+
+      function applyMapModeButtonStyles() {
+        if (nativeUi.mapOverdriveBtn) {
+          nativeUi.mapOverdriveBtn.style.background = runtime.mapOverdriveEnabled
+            ? "color-mix(in srgb, var(--accent-0) 24%, transparent)"
+            : "color-mix(in srgb, var(--panel-1) 78%, black)";
+          nativeUi.mapOverdriveBtn.style.borderColor = runtime.mapOverdriveEnabled
+            ? "color-mix(in srgb, var(--accent-0) 56%, transparent)"
+            : "color-mix(in srgb, var(--accent-0) 30%, transparent)";
+        }
+        if (nativeUi.mapCloakBtn) {
+          nativeUi.mapCloakBtn.style.background = runtime.mapCloakEnabled
+            ? "color-mix(in srgb, var(--accent-1) 22%, transparent)"
+            : "color-mix(in srgb, var(--panel-1) 78%, black)";
+          nativeUi.mapCloakBtn.style.borderColor = runtime.mapCloakEnabled
+            ? "color-mix(in srgb, var(--accent-1) 54%, transparent)"
+            : "color-mix(in srgb, var(--accent-1) 30%, transparent)";
+        }
+      }
+
+      nativeUi.mapSearchInput?.addEventListener("input", (event) => {
+        runtime.mapFilterText = String(event.target?.value || "");
+        renderMapFromScan();
+      });
+
+      nativeUi.mapOverdriveBtn?.addEventListener("click", () => {
+        runtime.mapOverdriveEnabled = !runtime.mapOverdriveEnabled;
+        holoMapRenderer.setOverdriveState(runtime.mapOverdriveEnabled);
+        applyMapModeButtonStyles();
+        showCfgStatus(runtime.mapOverdriveEnabled ? "Map Overdrive enabled." : "Map Overdrive disabled.");
+        showBanner(runtime.mapOverdriveEnabled ? "Map Overdrive enabled." : "Map Overdrive disabled.", "success");
+      });
+
+      nativeUi.mapCloakBtn?.addEventListener("click", () => {
+        runtime.mapCloakEnabled = !runtime.mapCloakEnabled;
+        nativeUi.mapCloakBtn.classList.toggle("opacity-55", runtime.mapCloakEnabled);
+        applyMapModeButtonStyles();
+        holoMapRenderer.setCloakState(runtime.mapCloakEnabled);
+        showCfgStatus(runtime.mapCloakEnabled ? "Map Cloak enabled." : "Map Cloak disabled.");
+        showBanner(runtime.mapCloakEnabled ? "Map Cloak enabled." : "Map Cloak disabled.", "success");
+      });
+
+      window.addEventListener("resize", () => rendererRegistry?.resizeActive?.(), { passive: true });
+      window.addEventListener("orientationchange", () => rendererRegistry?.resizeActive?.(), { passive: true });
+      window.addEventListener(NATIVE_EVENT, handleNativeEvent);
+      nativeUi.wifiTelemetryBtn?.addEventListener("click", () => {
+        const source = runtime.lastScanSource.toUpperCase();
+        const count = runtime.lastScanResults.length;
+        const gateway = runtime.lastGatewayIp || "Unknown";
+        showBanner(`Matrix cache: ${count} device${count === 1 ? "" : "s"} / source ${source} / gateway ${gateway}`, "info");
+      });
+      nativeUi.mapDeviceMatrixBtn?.addEventListener("click", () => {
+        setActive("list");
+        onListTabSelected();
+      });
+      nativeUi.mapRunScanBtn?.addEventListener("click", () => {
+        setActive("list");
+        requestNativeWifiScan(true);
+      });
+      nativeUi.deviceDetailBackdrop?.addEventListener("click", closeDeviceDetail);
+      nativeUi.deviceDetailClose?.addEventListener("click", closeDeviceDetail);
+      ui.btnTheme?.addEventListener("click", openThemeModal);
+      nativeUi.themeClose?.addEventListener("click", closeThemeModal);
+      nativeUi.speedtestThemeBackdrop?.addEventListener("click", closeThemeModal);
+      nativeUi.themeReset?.addEventListener("click", () => {
+        if (!window.HoloThemeManager) return;
+        const defaultTheme = window.HoloThemeManager.resetThemeForScreen("speedtest");
+        window.HoloThemeManager.applyTheme(defaultTheme);
+        if (runtime.config) applyVisualConfig(runtime.config);
+        updateGaugeColorProfile(cur.display);
+        gaugeRenderer.render(performance.now(), cur.needleDeg, cur.display);
+        renderThemeList();
+        closeThemeModal();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && nativeUi.speedtestThemeModal && !nativeUi.speedtestThemeModal.classList.contains("hidden")) {
+          closeThemeModal();
+        } else if (event.key === "Escape" && nativeUi.deviceDetailModal && !nativeUi.deviceDetailModal.classList.contains("hidden")) {
+          closeDeviceDetail();
+        }
+      });
+      cfgSaveBtn?.addEventListener("click", saveConfig);
+      cfgResetBtn?.addEventListener("click", resetConfig);
+      Object.values(cfgCtrls).forEach((control) => {
+        control?.addEventListener("change", () => {
+          applyConfigPreview(getCurrentConfig());
+          if (control === cfgCtrls.bridgeEnabled && nativeBridge?.available?.()) {
+            const nextBridgeState = nativeBridge.request("setBridgeEnabled", !!cfgCtrls.bridgeEnabled.checked);
+            if (nextBridgeState) {
+              runtime.bridgeState = nextBridgeState;
+              updateBridgeUi();
+            }
+            showBanner(cfgCtrls.bridgeEnabled.checked ? "Native Bridge enabled." : "Native Bridge disabled.", "success");
+          } else {
+            showCfgStatus("Preview updated. Save to persist.");
+          }
+        });
+      });
+      [cfgCtrls.neonIntensity, cfgCtrls.scanSpeed].forEach((control) => {
+        control?.addEventListener("input", () => applyConfigPreview(getCurrentConfig()));
+      });
+      nativeUi.wifiScanBtn?.addEventListener("click", () => requestNativeWifiScan(true));
+      nativeUi.wifiExportBtn?.addEventListener("click", exportDiagnostics);
+      nativeUi.cfgRefreshDeviceBtn?.addEventListener("click", () => {
+        syncBridgeState(false);
+        if (!runtime.bridgeState.enabled) {
+          showCfgStatus("Enable Native Bridge before requesting device info.");
+          showBanner("Enable Native Bridge before requesting device info.", "warn");
+          return;
+        }
+        if (refreshDeviceInfo()) {
+          showCfgStatus("Device snapshot refreshed.");
+          showBanner("Device snapshot refreshed.", "success");
+        } else {
+          showCfgStatus("Device snapshot unavailable.");
+          showBanner("Device snapshot unavailable.", "warn");
+        }
+      });
+      nativeUi.cfgExportDiagBtn?.addEventListener("click", exportDiagnostics);
+      window.addEventListener("beforeunload", () => {
+        if (isSpeedtestRunning()) nativeBridge?.invoke?.("speedtestAbort");
+        if (runtime.mapScanInProgress) nativeBridge?.invoke?.("lanScanStop");
+        rendererRegistry?.stopAll?.();
+      }, { once: true });
+      document.addEventListener("DOMContentLoaded", syncThemeButtonState, { once: true });
+      setActive(initialTabFromDom(), { applyTheme: false, deferRendererStart: true });
+      loadConfig();
+      applyMapModeButtonStyles();
+      holoMapRenderer.setOverdriveState(runtime.mapOverdriveEnabled);
+      holoMapRenderer.setCloakState(runtime.mapCloakEnabled);
+      scheduleInitialRendererStartup();
+      syncBridgeState(true);
+      updateDeviceUi();
+      const initialScan = nativeBridge?.call?.("lanScanGetLast");
+      if (initialScan?.ok && initialScan.scan) {
+        const scan = initialScan.scan;
+        runtime.lastScanCapturedAt = Number(scan.capturedAt || 0);
+        runtime.lastGatewayIp = String(scan.gatewayIp || "");
+        runtime.lastLocalIp = String(scan.localIp || "");
+        runtime.lastSubnet = String(scan.subnet || "");
+        renderWifiNetworks(Array.isArray(scan.devices) ? scan.devices : [], "cached", "Restored last native LAN snapshot");
+      } else {
+        renderWifiNetworks([], "none", "Waiting for LAN device data");
+      }
+      resetUI();
+    })();
+  </script>
+</body>
+</html>
